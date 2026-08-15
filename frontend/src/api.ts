@@ -18,9 +18,10 @@ async function req<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
 }
 
 export async function login(username: string, password: string): Promise<string> {
+  // Backend auth login contract uses `email` (not `username`).
   const json = await req('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({ email: username, password })
   })
   const data = json.data ?? json
   const token = data.token ?? json.token

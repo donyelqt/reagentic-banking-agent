@@ -1,65 +1,75 @@
 import { useEffect, useState } from 'react'
+import Landing from './Landing'
 import Login from './components/Login'
+import Dashboard from './components/Dashboard'
 import Transfer from './components/Transfer'
 import AgentChat from './components/AgentChat'
+import { Brand } from './components/Brand'
 import { getAccounts } from './api'
 import type { AccountView } from './types'
 
 type View = 'dashboard' | 'transfer' | 'agent'
 
 export default function App() {
+  const [stage, setStage] = useState<'landing' | 'app'>('landing')
   const [token, setToken] = useState<string | null>(localStorage.getItem('jwt'))
   const [accounts, setAccounts] = useState<AccountView[]>([])
   const [view, setView] = useState<View>('dashboard')
 
   useEffect(() => {
-    if (!token) return
-    getAccounts()
-      .then((r) => setAccounts(r.data ?? []))
-      .catch(() => setAccounts([]))
-  }, [token])
+    if (!token || stage !== 'app') return
+    getAccounts().then((r: any) => setAccounts(r.data ?? [])).catch(() => setAccounts([]))
+  }, [token, stage])
 
   function logout() {
     localStorage.removeItem('jwt')
     setToken(null)
+    setAccounts([])
+    setStage('landing')
   }
 
-  if (!token) return <Login onLogin={setToken} />
+  if (stage === 'landing') return <Landing onEnter={() => setStage('app')} />
+  if (!token) return <Login onLogin={(t) => { localStorage.setItem('jwt', t); setToken(t) }} />
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="flex items-center justify-between px-6 py-3 bg-white shadow">
-        <h1 className="font-bold text-indigo-700">Reagentic Bank</h1>
-        <button className="text-sm text-slate-500" onClick={logout}>
-          Sign out
-        </button>
-      </header>
-      <nav className="flex gap-4 px-6 py-2 bg-white border-b">
-        {(['dashboard', 'transfer', 'agent'] as View[]).map((v) => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className={view === v ? 'font-semibold text-indigo-700 capitalize' : 'text-slate-500 capitalize'}
-          >
-            {v}
-          </button>
-        ))}
-      </nav>
-      <main className="p-6">
-        {view === 'dashboard' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {accounts.map((a) => (
-              <div key={a.accountId} className="bg-white rounded-xl shadow p-5">
-                <p className="text-slate-500 capitalize">{a.type}</p>
-                <p className="text-2xl font-bold">${a.balance}</p>
-                <p className="text-xs text-slate-400">{a.accountId}</p>
-              </div>
-            ))}
-            {accounts.length === 0 && <p className="text-slate-400">No accounts found.</p>}
+    <div className="min-h-screen bg-bg text-ink">
+      <header className="sticky top-0 z-30 px-4 md:px-8 py-4">
+        <div className="glass rounded-full px-5 py-3 flex items-center justify-between shadow-soft">
+          <div className="flex items-center gap-5">
+            <button onClick={() => setView('dashboard')} className="flex items-center">
+              <Brand tone="light" />
+            </button>
+            <nav className="hidden md:flex items-center gap-1 bg-[#EDEBE3] rounded-full p-1">
+              {(['dashboard', 'transfer', 'agent'] as View[]).map((v) => (
+                <button key={v} onClick={() => setView(v)}
+                  className={`capitalize px-4 py-1.5 rounded-full text-sm transition ${view === v ? 'bg-ink text-white' : 'text-muted hover:text-ink'}`}>
+                  {v}
+                </button>
+              ))}
+            </nav>
           </div>
-        )}
-        {view === 'transfer' && <Transfer accounts={accounts} />}
-        {view === 'agent' && <AgentChat />}
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:flex items-center gap-2 text-sm text-muted">
+              <span className="w-8 h-8 rounded-full bg-accent text-white grid place-items-center text-xs font-semibold">D</span>
+              demo@bank.dev
+            </span>
+            <button onClick={logout} className="btn btn-ghost !py-2 !px-4 text-sm">Sign out</button>
+          </div>
+        </div>
+        <nav className="md:hidden mt-3 glass rounded-full p-1 flex justify-between">
+          {(['dashboard', 'transfer', 'agent'] as View[]).map((v) => (
+            <button key={v} onClick={() => setView(v)}
+              className={`flex-1 capitalize py-2 rounded-full text-sm transition ${view === v ? 'bg-ink text-white' : 'text-muted'}`}>{v}</button>
+          ))}
+        </nav>
+      </header>
+
+      <main className="px-4 md:px-8 pb-16 max-w-6xl mx-auto pt-6">
+        <div key={view} className="view-in">
+          {view === 'dashboard' && <Dashboard accounts={accounts} onTransfer={() => setView('transfer')} />}
+          {view === 'transfer' && <Transfer accounts={accounts} onDone={() => { getAccounts().then((r: any) => setAccounts(r.data ?? [])).catch(() => {}); setView('dashboard') }} />}
+          {view === 'agent' && <AgentChat />}
+        </div>
       </main>
     </div>
   )

@@ -9,7 +9,7 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins: "${VITE_GATEWAY_URL:http://localhost:5173}"
+            allowedOriginPatterns: "${GATEWAY_CORS_ORIGINS:http://localhost:*}"
             allowedMethods:
               - GET
               - POST

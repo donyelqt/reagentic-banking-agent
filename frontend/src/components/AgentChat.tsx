@@ -3,10 +3,7 @@ import { agentChat } from '../api'
 import type { AgentResponse } from '../types'
 import ApprovalModal from './ApprovalModal'
 
-interface Msg {
-  role: 'user' | 'agent'
-  text: string
-}
+interface Msg { role: 'user' | 'agent'; text: string }
 
 export default function AgentChat() {
   const [messages, setMessages] = useState<Msg[]>([])
@@ -17,67 +14,67 @@ export default function AgentChat() {
   async function send(text: string, body?: any) {
     setBusy(true)
     try {
-      const res = await agentChat(body ?? { message: text })
-      setLast(res)
-      setMessages((m) => [...m, { role: 'agent', text: res.reply }])
-      return res
-    } finally {
-      setBusy(false)
-    }
+      const json: any = await agentChat(body ?? { message: text })
+      const data: AgentResponse = json?.data ?? json
+      setLast(data)
+      setMessages((m) => [...m, { role: 'agent', text: data.reply }])
+      return data
+    } finally { setBusy(false) }
   }
 
   function onSend(e: React.FormEvent) {
     e.preventDefault()
-    if (!input.trim()) return
-    const text = input.trim()
-    setMessages((m) => [...m, { role: 'user', text }])
+    const t = input.trim()
+    if (!t) return
+    setMessages((m) => [...m, { role: 'user', text: t }])
     setInput('')
-    send(text)
+    send(t)
   }
 
   function onApprove() {
     if (!last) return
-    const stepIds = last.pendingSteps.map((s) => s.stepId)
-    setMessages((m) => [...m, { role: 'user', text: 'Approved: ' + stepIds.join(', ') }])
-    send('', { plan: last.plan, approval: stepIds })
+    const ids = last.pendingSteps.map((s) => s.stepId)
+    setMessages((m) => [...m, { role: 'user', text: 'Approved: ' + ids.join(', ') }])
+    send('', { plan: last.plan, approval: ids })
   }
 
   return (
-    <div className="flex flex-col h-[70vh] border rounded-xl bg-white">
-      <div className="flex-1 overflow-auto p-4 space-y-2">
-        {messages.length === 0 && (
-          <p className="text-slate-400">
-            Ask me to transfer money (I&apos;ll ask for approval) or reconcile an account.
-          </p>
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-4xl mb-1">Agent</h1>
+      <p className="text-muted mb-6">Ask in plain language. Risky moves wait for your approval.</p>
+      <div className="glass relative rounded-[26px] h-[64vh] flex flex-col overflow-hidden shadow-card">
+        <div className="flex-1 overflow-auto p-5 space-y-4">
+          {messages.length === 0 && (
+            <div className="h-full grid place-items-center text-center">
+              <div className="max-w-sm">
+                <div className="w-14 h-14 rounded-2xl mx-auto mb-4 grid place-items-center" style={{ background: 'conic-gradient(from 200deg,#2D43F5,#6A4BFF,#0CA678,#2D43F5)' }}>
+                  <span className="w-4 h-4 rounded-full bg-white" />
+                </div>
+                <p className="text-muted">Try: <span className="text-ink">“transfer 50 to savings”</span> or <span className="text-ink">“reconcile checking”</span></p>
+              </div>
+            </div>
+          )}
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} bubble-in`}>
+              <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'bg-accent text-white rounded-br-md' : 'bg-white border border-line rounded-bl-md'}`}>{m.text}</div>
+            </div>
+          ))}
+          {busy && (
+            <div className="flex justify-start bubble-in">
+              <div className="bg-white border border-line rounded-2xl rounded-bl-md px-4 py-3">
+                <span className="w-4 h-4 border-2 border-ink/20 border-t-accent rounded-full spin inline-block" />
+              </div>
+            </div>
+          )}
+        </div>
+        {last && last.pendingSteps.length > 0 && (
+          <ApprovalModal steps={last.pendingSteps} onApprove={onApprove} onCancel={() => setLast(null)} />
         )}
-        {messages.map((m, i) => (
-          <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
-            <span
-              className={
-                m.role === 'user'
-                  ? 'inline-block bg-indigo-600 text-white rounded p-2'
-                  : 'inline-block bg-slate-200 rounded p-2'
-              }
-            >
-              {m.text}
-            </span>
-          </div>
-        ))}
+        <form onSubmit={onSend} className="flex gap-2 p-3 border-t border-line bg-surface/60">
+          <input className="field" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask the agent..." />
+          <button className="btn btn-accent px-5" disabled={busy}>{busy ? '...' : 'Send'}</button>
+        </form>
       </div>
-      {last && last.pendingSteps.length > 0 && (
-        <ApprovalModal steps={last.pendingSteps} onApprove={onApprove} onCancel={() => setLast(null)} />
-      )}
-      <form onSubmit={onSend} className="flex border-t p-2 gap-2">
-        <input
-          className="flex-1 border rounded p-2"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="e.g. transfer 50 to savings"
-        />
-        <button className="bg-indigo-600 text-white rounded px-4" disabled={busy}>
-          {busy ? '…' : 'Send'}
-        </button>
-      </form>
     </div>
   )
 }

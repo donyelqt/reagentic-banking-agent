@@ -1,31 +1,26 @@
 import type { Step } from '../types'
 
-export default function ApprovalModal({
-  steps,
-  onApprove,
-  onCancel
-}: {
-  steps: Step[]
-  onApprove: () => void
-  onCancel: () => void
-}) {
+export default function ApprovalModal({ steps, onApprove, onCancel }: { steps: Step[]; onApprove: () => void; onCancel: () => void }) {
   return (
-    <div className="border-t bg-amber-50 p-3">
-      <p className="font-semibold text-amber-800">Confirmation required</p>
-      <ul className="text-sm my-2 space-y-1">
-        {steps.map((s) => (
-          <li key={s.stepId} className="font-mono text-xs">
-            {s.tool} {JSON.stringify(s.args)}
-          </li>
-        ))}
-      </ul>
-      <div className="flex gap-2">
-        <button className="bg-green-600 text-white rounded px-3 py-1 text-sm" onClick={onApprove}>
-          Approve &amp; execute
-        </button>
-        <button className="border rounded px-3 py-1 text-sm" onClick={onCancel}>
-          Cancel
-        </button>
+    <div className="absolute inset-0 z-20 grid place-items-end sm:place-items-center p-3 backdrop-in bg-[#0A0B14]/30">
+      <div className="glass rounded-[24px] p-5 w-full max-w-md modal-in shadow-lift">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-7 h-7 rounded-full grid place-items-center bg-gold/15 text-gold font-display">!</span>
+          <p className="font-display text-lg">Confirmation required</p>
+        </div>
+        <p className="text-sm text-muted mb-3">The agent prepared these steps. Approve to execute.</p>
+        <ul className="space-y-2 mb-4">
+          {steps.map((s) => (
+            <li key={s.stepId} className="flex items-center justify-between rounded-xl border border-line bg-bg px-3 py-2 text-sm">
+              <span className="font-medium capitalize">{s.tool.replace(/([A-Z])/g, ' $1')}</span>
+              <span className="text-muted font-mono text-xs truncate max-w-[52%]">{JSON.stringify(s.args)}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="flex gap-2">
+          <button onClick={onApprove} className="btn btn-accent flex-1">Approve &amp; execute</button>
+          <button onClick={onCancel} className="btn btn-ghost flex-1">Cancel</button>
+        </div>
       </div>
     </div>
   )

@@ -5,8 +5,16 @@ import ApprovalModal from './ApprovalModal'
 
 interface Msg { role: 'user' | 'agent'; text: string }
 
+// Initial greeting shown the moment the chat opens. Rendered client-side so the
+// "hello" is always visible (the backend only returns this text as a *reply* to a
+// message, so without this the empty state showed a generic placeholder instead).
+const GREETING =
+  "Hello! I'm your banking agent. I can help with: list accounts, balances, transactions, " +
+  'transfers (with your approval), and reconciling an account. ' +
+  'Try "transfer 50 to savings" or "reconcile my checking account".'
+
 export default function AgentChat() {
-  const [messages, setMessages] = useState<Msg[]>([])
+  const [messages, setMessages] = useState<Msg[]>([{ role: 'agent', text: GREETING }])
   const [input, setInput] = useState('')
   const [last, setLast] = useState<AgentResponse | null>(null)
   const [busy, setBusy] = useState(false)
@@ -17,7 +25,8 @@ export default function AgentChat() {
       const json: any = await agentChat(body ?? { message: text })
       const data: AgentResponse = json?.data ?? json
       setLast(data)
-      setMessages((m) => [...m, { role: 'agent', text: data.reply }])
+      const reply = data?.reply?.trim()
+      if (reply) setMessages((m) => [...m, { role: 'agent', text: reply }])
       return data
     } finally { setBusy(false) }
   }
@@ -44,16 +53,6 @@ export default function AgentChat() {
       <p className="text-muted mb-6">Ask in plain language. Risky moves wait for your approval.</p>
       <div className="glass relative rounded-[26px] h-[64vh] flex flex-col overflow-hidden shadow-card">
         <div className="flex-1 overflow-auto p-5 space-y-4">
-          {messages.length === 0 && (
-            <div className="h-full grid place-items-center text-center">
-              <div className="max-w-sm">
-                <div className="w-14 h-14 rounded-2xl mx-auto mb-4 grid place-items-center" style={{ background: 'conic-gradient(from 200deg,#2D43F5,#6A4BFF,#0CA678,#2D43F5)' }}>
-                  <span className="w-4 h-4 rounded-full bg-white" />
-                </div>
-                <p className="text-muted">Try: <span className="text-ink">“transfer 50 to savings”</span> or <span className="text-ink">“reconcile checking”</span></p>
-              </div>
-            </div>
-          )}
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} bubble-in`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'bg-accent text-white rounded-br-md' : 'bg-white border border-line rounded-bl-md'}`}>{m.text}</div>

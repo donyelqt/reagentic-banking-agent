@@ -1,0 +1,37 @@
+# Build artifacts
+target/
+*.class
+*.jar
+*.war
+
+# Secrets / local env (NEVER commit)
+.env
+.env.*
+!.env.example
+infra/.env
+infra/.env.*
+!.env.example
+!infra/.env.example
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Maven wrapper downloaded distro
+.mvn/wrapper/apache-maven-*/
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+*.log

@@ -1,0 +1,24 @@
+# Reduced-heap overlay for <=16 GB hosts.
+# Apply with: docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build
+services:
+  auth-service:
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx256m -XX:MaxMetaspaceSize=128m"
+  account-service:
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx256m -XX:MaxMetaspaceSize=128m"
+  payment-service:
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx256m -XX:MaxMetaspaceSize=128m"
+  ledger-service:
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx256m -XX:MaxMetaspaceSize=128m"
+  notification-service:
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx256m -XX:MaxMetaspaceSize=128m"
+  ai-agent:
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx384m -XX:MaxMetaspaceSize=128m"
+  gateway:
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx256m -XX:MaxMetaspaceSize=128m"

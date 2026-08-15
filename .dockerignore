@@ -1,0 +1,8 @@
+# Docker build context exclusions (repo root is the compose build context)
+.git
+**/target
+**/.mvn/wrapper/apache-maven-*
+**/node_modules
+frontend/dist
+**/*.log
+**/.DS_Store

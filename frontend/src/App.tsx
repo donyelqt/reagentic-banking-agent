@@ -42,7 +42,7 @@ export default function App() {
             <nav className="hidden md:flex items-center gap-1 bg-[#EDEBE3] rounded-full p-1">
               {(['dashboard', 'transfer', 'agent'] as View[]).map((v) => (
                 <button key={v} onClick={() => setView(v)}
-                  className={`capitalize px-4 py-1.5 rounded-full text-sm transition ${view === v ? 'bg-ink text-white' : 'text-muted hover:text-ink'}`}>
+                  className={`capitalize px-4 py-1.5 rounded-full text-sm transition ${view === v ? 'bg-accent text-white shadow-soft' : 'text-muted hover:text-ink'}`}>
                   {v}
                 </button>
               ))}
@@ -59,7 +59,7 @@ export default function App() {
         <nav className="md:hidden mt-3 glass rounded-full p-1 flex justify-between">
           {(['dashboard', 'transfer', 'agent'] as View[]).map((v) => (
             <button key={v} onClick={() => setView(v)}
-              className={`flex-1 capitalize py-2 rounded-full text-sm transition ${view === v ? 'bg-ink text-white' : 'text-muted'}`}>{v}</button>
+              className={`flex-1 capitalize py-2 rounded-full text-sm transition ${view === v ? 'bg-accent text-white shadow-soft' : 'text-muted'}`}>{v}</button>
           ))}
         </nav>
       </header>

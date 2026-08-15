@@ -55,7 +55,7 @@ export default function AgentChat() {
         <div className="flex-1 overflow-auto p-5 space-y-4">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} bubble-in`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'bg-accent text-white rounded-br-md' : 'bg-white border border-line rounded-bl-md'}`}>{m.text}</div>
+              <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'bg-[#2D43F5] text-white shadow-soft rounded-br-md' : 'bg-white border border-line rounded-bl-md'}`}>{m.text}</div>
             </div>
           ))}
           {busy && (

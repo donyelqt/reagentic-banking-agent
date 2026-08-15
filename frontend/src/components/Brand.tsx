@@ -1,17 +1,42 @@
-export function Brand({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
-  const text = tone === 'dark' ? 'text-white' : 'text-ink'
+// Reagentic brand mark.
+// The glyph is a deliberate evolution of Accenture's signature ">" — here a forward
+// double-chevron: a faint trailing "re-" echo chasing a bold cobalt->cyan "agentic"
+// chevron. It reads as Accenture's ">", encodes reinvention ("re"), and signals the
+// agent stepping forward. The looping advance = reinvention in motion.
+
+type BrandTone = 'dark' | 'light'
+
+export function Brand({ tone = 'dark' }: { tone?: BrandTone }) {
+  const toneClass = tone === 'dark' ? 'brand--dark' : 'brand--light'
   return (
-    <div className="flex items-center gap-2.5 select-none">
-      <span
-        className="relative w-8 h-8 rounded-xl overflow-hidden shadow-[0_8px_20px_-6px_rgba(45,67,245,.8)]"
-        style={{ background: 'conic-gradient(from 200deg,#2D43F5,#6A4BFF,#0CA678,#2D43F5)' }}
-      >
-        <span className="absolute inset-[3px] rounded-[10px] bg-[#0A0B14]/80 grid place-items-center">
-          <span className="w-2.5 h-2.5 rounded-full bg-white" />
-        </span>
+    <div className={`brand ${toneClass}`}>
+      <span className="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="reagenticStroke" x1="12" y1="8" x2="40" y2="32" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#2D43F5" />
+              <stop offset="1" stopColor="#19C2F0" />
+            </linearGradient>
+          </defs>
+          <path
+            className="bm-echo"
+            d="M12 9 L24 20 L12 31"
+            stroke="url(#reagenticStroke)"
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M26 9 L40 20 L26 31"
+            stroke="url(#reagenticStroke)"
+            strokeWidth="6.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </span>
-      <span className={`font-display text-lg font-semibold tracking-tight ${text}`}>
-        Reagentic
+      <span className="brand-word">
+        <span className="brand-re">re</span><span className="brand-agentic">agentic</span>
       </span>
     </div>
   )

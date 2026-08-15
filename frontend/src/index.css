@@ -127,3 +127,19 @@ a{color:inherit}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+/* ===== Reagentic brand mark ===== */
+.brand { display: inline-flex; align-items: center; gap: .6rem; user-select: none; }
+.brand-mark { display: block; width: 2.4rem; height: 1.6rem; filter: drop-shadow(0 4px 12px rgba(45, 67, 245, .35)); }
+.brand-mark svg { width: 100%; height: 100%; overflow: visible; }
+.bm-echo { transform-box: fill-box; transform-origin: center; animation: bm-advance 2.6s ease-in-out infinite; }
+@keyframes bm-advance {
+  0%   { transform: translateX(-5px); opacity: 0; }
+  25%  { opacity: .4; }
+  100% { transform: translateX(7px);  opacity: 0; }
+}
+.brand-word { font-family: var(--font-display); font-size: 1.15rem; letter-spacing: -.01em; line-height: 1; }
+.brand-re { font-weight: 300; opacity: .6; }
+.brand-agentic { font-weight: 600; }
+.brand--dark  .brand-word { color: #fff; }
+.brand--light .brand-word { color: var(--ink, #0b1220); }
+@media (prefers-reduced-motion: reduce) { .bm-echo { animation: none; opacity: .3; } }

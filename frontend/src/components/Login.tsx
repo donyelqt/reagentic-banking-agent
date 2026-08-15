@@ -1,57 +1,50 @@
 import { useState } from 'react'
 import { login } from '../api'
+import { Brand } from './Brand'
 
 export default function Login({ onLogin }: { onLogin: (token: string) => void }) {
-  const [username, setUsername] = useState('demo@bank.dev')
+  const [email, setEmail] = useState('demo@bank.dev')
   const [password, setPassword] = useState('demo1234')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     try {
-      const token = await login(username, password)
+      const token = await login(email, password)
       localStorage.setItem('jwt', token)
       onLogin(token)
     } catch (err: any) {
       setError(err.message || 'Login failed')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100">
-      <form onSubmit={submit} className="bg-white p-8 rounded-xl shadow-md w-80 space-y-4">
-        <h1 className="text-xl font-bold text-center text-slate-800">Reagentic Bank</h1>
-        <div>
-          <label className="block text-sm text-slate-600">Email</label>
-          <input
-            className="w-full border rounded p-2 mt-1"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
+    <div className="stage-light grain min-h-screen grid place-items-center px-4">
+      <div className="orb orb-1" /><div className="orb orb-2" />
+      <div className="relative z-10 w-full max-w-md">
+        <div className="flex justify-center mb-8"><Brand tone="light" /></div>
+        <div className="glass rounded-[28px] p-8 shadow-lift">
+          <h1 className="text-3xl">Welcome back</h1>
+          <p className="text-muted mt-2 text-sm">Sign in to your private agentic bank.</p>
+          <form onSubmit={submit} className="mt-7 space-y-4">
+            <div>
+              <label className="label">Email</label>
+              <input className="field mt-1.5" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            </div>
+            <div>
+              <label className="label">Password</label>
+              <input className="field mt-1.5" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+            </div>
+            {error && <div className="text-neg text-sm bg-[rgba(229,72,77,.1)] rounded-xl px-3 py-2">{error}</div>}
+            <button type="submit" disabled={loading} className="btn btn-accent w-full !py-3 text-base cta-pulse disabled:opacity-60">
+              {loading ? <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full spin" /> : 'Sign in'}
+            </button>
+          </form>
+          <p className="text-center text-muted text-xs mt-5">Demo · demo@bank.dev / demo1234</p>
         </div>
-        <div>
-          <label className="block text-sm text-slate-600">Password</label>
-          <input
-            type="password"
-            className="w-full border rounded p-2 mt-1"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        {error && <div className="text-red-600 text-sm">{error}</div>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-indigo-600 text-white rounded p-2 hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {loading ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
+      </div>
     </div>
   )
 }

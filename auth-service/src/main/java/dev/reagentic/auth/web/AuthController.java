@@ -6,7 +6,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -30,8 +29,8 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
-        String token = authService.login(req.email(), req.password());
-        return ApiResponse.ok(new LoginResponse(token, req.email(), "USER"));
+        AuthService.LoginResult result = authService.login(req.email(), req.password());
+        return ApiResponse.ok(new LoginResponse(result.token(), req.email(), result.role()));
     }
 
     @GetMapping("/me")

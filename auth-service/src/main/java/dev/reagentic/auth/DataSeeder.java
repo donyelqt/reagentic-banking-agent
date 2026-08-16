@@ -17,5 +17,6 @@ public class DataSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         authService.seedDemoUserIfAbsent();
+        authService.seedEmployeeIfAbsent();
     }
 }

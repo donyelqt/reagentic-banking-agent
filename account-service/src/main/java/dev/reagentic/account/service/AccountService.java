@@ -31,9 +31,14 @@ public class AccountService {
                 .orElseThrow(() -> new AccountException("ACCOUNT_NOT_FOUND", "Account not found or not owned by caller"));
     }
 
+    public Account getAny(String accountId) {
+        return accountRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new AccountException("ACCOUNT_NOT_FOUND", "Account not found"));
+    }
+
     @Transactional
     public Money debit(String email, String accountId, Money amount, String idempotencyKey) {
-        Account account = loadOwned(email, accountId);
+        Account account  = loadOwned(email, accountId);
         Optional<AccountIdempotency> existing = idemRepository.findByKey(idempotencyKey);
         if (existing.isPresent()) {
             return Money.of(account.getBalance());
@@ -67,12 +72,10 @@ public class AccountService {
 
     public static class AccountException extends RuntimeException {
         private final String code;
-
         public AccountException(String code, String message) {
             super(message);
             this.code = code;
         }
-
         public String getCode() {
             return code;
         }

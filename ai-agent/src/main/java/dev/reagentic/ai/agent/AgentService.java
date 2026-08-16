@@ -60,6 +60,24 @@ public class AgentService {
                             .append(" but ledger ends at balanceAfter=").append(m.get("lastBalanceAfter"))
                             .append(", entry #").append(m.get("lastEntryId")).append(").\n");
                     sb.append(m.get("diagnosis")).append("\n");
+                    sb.append("\nEvidence trail (last 12 of ").append(m.get("evidenceCount")).append(" ledger entries):\n");
+                    if (m.get("evidence") instanceof java.util.List<?> ev) {
+                        for (Object e : ev) {
+                            if (e instanceof java.util.Map<?, ?> em) {
+                                sb.append("  #").append(em.get("entryId"))
+                                        .append(" ").append(em.get("type"))
+                                        .append(" ").append(em.get("signedAmount"))
+                                        .append(" (payment ").append(em.get("paymentId"))
+                                        .append(") balanceAfter=").append(em.get("balanceAfter")).append("\n");
+                            }
+                        }
+                    }
+                    sb.append("\nProposed corrective journal entry (NOT executed - requires ops review):\n");
+                    boolean debitLeg = "MISSING_DEBIT_LEG".equals(m.get("direction"));
+                    sb.append("  ").append(debitLeg ? "Dr." : "Cr.").append(" Account ").append(m.get("accountId"))
+                            .append("  ").append(m.get("missingAmount")).append("\n");
+                    sb.append("  ").append(debitLeg ? "Cr." : "Dr.").append(" Ledger-Suspense-").append(m.get("accountId"))
+                            .append("  ").append(m.get("missingAmount")).append("\n");
                 }
             } else if (r.data() instanceof java.util.Map<?, ?> pm && pm.containsKey("paymentId")) {
                 sb.append("Transfer executed: payment ").append(pm.get("paymentId"))

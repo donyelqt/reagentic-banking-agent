@@ -9,12 +9,10 @@ import java.util.Map;
 public class AgentService {
 
     private final Planner planner;
-    private final AgentWorkers workers;
     private final Executor executor;
 
-    public AgentService(Planner planner, AgentWorkers workers, Executor executor) {
+    public AgentService(Planner planner, Executor executor) {
         this.planner = planner;
-        this.workers = workers;
         this.executor = executor;
     }
 
@@ -52,7 +50,7 @@ public class AgentService {
             }
             if (r.data() instanceof com.fasterxml.jackson.databind.node.ObjectNode on) {
                 Map<String, Object> m = new java.util.LinkedHashMap<>();
-                on.fields().forEachRemaining(e -> {
+                on.properties().forEach(e -> {
                     com.fasterxml.jackson.databind.JsonNode v = e.getValue();
                     m.put(e.getKey(), v.isValueNode() ? v.asText() : v);
                 });
@@ -124,7 +122,7 @@ public class AgentService {
             for (com.fasterxml.jackson.databind.JsonNode n : an) {
                 if (n instanceof com.fasterxml.jackson.databind.node.ObjectNode o) {
                     Map<String, Object> m = new java.util.LinkedHashMap<>();
-                    o.fields().forEachRemaining(e -> {
+                    o.properties().forEach(e -> {
                         com.fasterxml.jackson.databind.JsonNode v = e.getValue();
                         m.put(e.getKey(), v.isValueNode() ? v.asText() : v);
                     });

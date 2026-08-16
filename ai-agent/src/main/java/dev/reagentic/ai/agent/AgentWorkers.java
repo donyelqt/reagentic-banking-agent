@@ -2,8 +2,6 @@ package dev.reagentic.ai.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -17,8 +15,6 @@ import java.util.Map;
 
 @Component
 public class AgentWorkers {
-
-    private static final Logger log = LoggerFactory.getLogger(AgentWorkers.class);
 
     private final RestClient accountClient;
     private final RestClient ledgerClient;
@@ -75,7 +71,7 @@ public class AgentWorkers {
         JsonNode txns = listTransactions(token, accountId, true);
         BigDecimal sum = BigDecimal.ZERO;
         List<Map<String, Object>> evidence = new ArrayList<>();
-        String lastEntryId = null, lastPaymentId = null, lastType = null, lastSigned = null, lastBalanceAfter = null;
+        String lastEntryId = null, lastPaymentId = null, lastType = null, lastBalanceAfter = null;
         if (txns != null && txns.isArray()) {
             for (JsonNode t : txns) {
                 String signed = t.path("signedAmount").asText("0");
@@ -83,7 +79,6 @@ public class AgentWorkers {
                 lastEntryId = t.path("entryId").asText();
                 lastPaymentId = t.hasNonNull("paymentId") ? t.path("paymentId").asText() : "OPENING";
                 lastType = t.path("type").asText();
-                lastSigned = signed;
                 lastBalanceAfter = t.path("balanceAfter").asText();
                 Map<String, Object> e = new LinkedHashMap<>();
                 e.put("entryId", t.path("entryId").asText());

@@ -10,7 +10,9 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -36,12 +38,12 @@ public class AgentWorkers {
     }
 
     public String getBalance(String token, String accountId) {
-        JsonNode data = getNode(accountClient, "/api/accounts/" + accountId + "/balance", token);
+        JsonNode data = getNode(accountClient, "/api/accounts/internal/balance/" + accountId, token);
         return data.get("balance").asText();
     }
 
     public JsonNode listTransactions(String token, String accountId) {
-        return getNode(ledgerClient, "/api/ledger/" + accountId, token);
+        return getNode(ledgerClient, "/api/ledger/internal/" + accountId, token);
     }
 
     public JsonNode transfer(String token, String from, String to, String amount, String idempotencyKey) {
@@ -68,24 +70,58 @@ public class AgentWorkers {
         String balance = getBalance(token, accountId);
         JsonNode txns = listTransactions(token, accountId);
         BigDecimal sum = BigDecimal.ZERO;
+        List<Map<String, Object>> evidence = new ArrayList<>();
+        String lastEntryId = null, lastPaymentId = null, lastType = null, lastSigned = null, lastBalanceAfter = null;
         if (txns != null && txns.isArray()) {
             for (JsonNode t : txns) {
-                sum = sum.add(new BigDecimal(t.get("signedAmount").asText("0")));
+                String signed = t.path("signedAmount").asText("0");
+                sum = sum.add(new BigDecimal(signed));
+                lastEntryId = t.path("entryId").asText();
+                lastPaymentId = t.path("paymentId").asText();
+                lastType = t.path("type").asText();
+                lastSigned = signed;
+                lastBalanceAfter = t.path("balanceAfter").asText();
+                Map<String, Object> e = new LinkedHashMap<>();
+                e.put("entryId", t.path("entryId").asText());
+                e.put("type", lastType);
+                e.put("signedAmount", signed);
+                e.put("balanceAfter", lastBalanceAfter);
+                e.put("paymentId", t.path("paymentId").asText());
+                evidence.add(e);
             }
         }
         BigDecimal bal = new BigDecimal(balance);
-        boolean balanced = sum.compareTo(bal) == 0;
+        BigDecimal delta = bal.subtract(sum);
+        boolean balanced = delta.compareTo(BigDecimal.ZERO) == 0;
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("accountId", accountId);
         result.put("balance", balance);
         result.put("ledgerSum", sum.toPlainString());
         result.put("balanced", balanced);
-        if (!balanced) {
-            result.put("delta", bal.subtract(sum).toPlainString());
-            result.put("suspect", sum.compareTo(bal) < 0 ? "MISSING_DEBIT_LEG" : "MISSING_CREDIT_LEG");
-            result.put("diagnosis",
-                    "Account balance and the immutable ledger disagree. A ledger leg is missing.");
+        if (balanced) {
+            return result;
         }
+        BigDecimal lastBal = (lastBalanceAfter == null || lastBalanceAfter.isBlank())
+                ? BigDecimal.ZERO : new BigDecimal(lastBalanceAfter);
+        BigDecimal missingSigned = bal.subtract(lastBal);
+        String direction = missingSigned.signum() < 0 ? "MISSING_DEBIT_LEG" : "MISSING_CREDIT_LEG";
+        BigDecimal missingAmount = missingSigned.abs();
+        String anchorPayment = (lastPaymentId == null || lastPaymentId.isBlank()) ? "OPENING" : lastPaymentId;
+        result.put("delta", delta.toPlainString());
+        result.put("direction", direction);
+        result.put("missingAmount", missingAmount.toPlainString());
+        result.put("lastEntryId", lastEntryId);
+        result.put("lastPaymentId", lastPaymentId);
+        result.put("lastBalanceAfter", lastBalanceAfter);
+        result.put("diagnosis",
+                "Account balance (" + balance + ") does not equal the immutable ledger. The ledger is "
+                + "internally consistent and ends at balanceAfter=" + lastBalanceAfter + " (entry #" + lastEntryId
+                + ", payment " + anchorPayment + "), but the account now reports " + balance + ". A "
+                + direction + " of " + missingAmount.toPlainString() + " was applied to the account but "
+                + "was never appended to the ledger. Investigate the transfer/payment that should have "
+                + "written this leg.");
+        int from = Math.max(0, evidence.size() - 12);
+        result.put("evidence", evidence.subList(from, evidence.size()));
         return result;
     }
 

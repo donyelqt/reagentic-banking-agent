@@ -52,10 +52,14 @@ public class AgentService {
                 } else {
                     sb.append("Reconciliation MISMATCH on ").append(m.get("accountId"))
                             .append(": balance=").append(m.get("balance"))
-                            .append(" but ledgerSum=").append(m.get("ledgerSum"))
-                            .append(" (delta=").append(m.get("delta"))
-                            .append(", suspect=").append(m.get("suspect")).append("). ")
-                            .append(m.get("diagnosis")).append("\n");
+                            .append(", ledgerSum=").append(m.get("ledgerSum"))
+                            .append(", delta=").append(m.get("delta")).append(".\n");
+                    sb.append("Root cause: ").append(m.get("direction"))
+                            .append(" of ").append(m.get("missingAmount"))
+                            .append(" (account reports ").append(m.get("balance"))
+                            .append(" but ledger ends at balanceAfter=").append(m.get("lastBalanceAfter"))
+                            .append(", entry #").append(m.get("lastEntryId")).append(").\n");
+                    sb.append(m.get("diagnosis")).append("\n");
                 }
             } else if (r.data() instanceof java.util.Map<?, ?> pm && pm.containsKey("paymentId")) {
                 sb.append("Transfer executed: payment ").append(pm.get("paymentId"))

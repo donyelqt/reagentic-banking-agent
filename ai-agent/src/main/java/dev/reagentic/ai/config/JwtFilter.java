@@ -6,6 +6,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
@@ -21,6 +23,8 @@ import java.util.List;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
+
     @Value("${JWT_SECRET}")
     private String jwtSecret;
 
@@ -34,6 +38,7 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         String token = JwtUtil.bearer(request.getHeader("Authorization"));
         if (token == null || token.isBlank()) {
+            log.warn("jwt-filter MISSING token for {}", request.getServletPath());
             sendError(response, HttpStatus.UNAUTHORIZED, "MISSING_TOKEN", "Authorization header required");
             return;
         }
@@ -46,6 +51,9 @@ public class JwtFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(auth);
             chain.doFilter(request, response);
         } catch (Exception e) {
+            log.warn("jwt-filter VERIFY FAILED for {}: {} (token head {})",
+                    request.getServletPath(), e.getMessage(),
+                    token.substring(0, Math.min(20, token.length())));
             sendError(response, HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Token verification failed");
         }
     }

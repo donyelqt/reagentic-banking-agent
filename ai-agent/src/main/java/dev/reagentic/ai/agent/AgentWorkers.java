@@ -37,13 +37,17 @@ public class AgentWorkers {
         return getNode(accountClient, "/api/accounts", token);
     }
 
-    public String getBalance(String token, String accountId) {
-        JsonNode data = getNode(accountClient, "/api/accounts/internal/balance/" + accountId, token);
+    public String getBalance(String token, String accountId, boolean internal) {
+        String path = internal
+                ? "/api/accounts/internal/balance/" + accountId
+                : "/api/accounts/" + accountId + "/balance";
+        JsonNode data = getNode(accountClient, path, token);
         return data.get("balance").asText();
     }
 
-    public JsonNode listTransactions(String token, String accountId) {
-        return getNode(ledgerClient, "/api/ledger/internal/" + accountId, token);
+    public JsonNode listTransactions(String token, String accountId, boolean internal) {
+        String path = internal ? "/api/ledger/internal/" + accountId : "/api/ledger/" + accountId;
+        return getNode(ledgerClient, path, token);
     }
 
     public JsonNode transfer(String token, String from, String to, String amount, String idempotencyKey) {
@@ -67,8 +71,8 @@ public class AgentWorkers {
     }
 
     public Map<String, Object> reconcile(String token, String accountId) {
-        String balance = getBalance(token, accountId);
-        JsonNode txns = listTransactions(token, accountId);
+        String balance = getBalance(token, accountId, true);
+        JsonNode txns = listTransactions(token, accountId, true);
         BigDecimal sum = BigDecimal.ZERO;
         List<Map<String, Object>> evidence = new ArrayList<>();
         String lastEntryId = null, lastPaymentId = null, lastType = null, lastSigned = null, lastBalanceAfter = null;
@@ -77,7 +81,7 @@ public class AgentWorkers {
                 String signed = t.path("signedAmount").asText("0");
                 sum = sum.add(new BigDecimal(signed));
                 lastEntryId = t.path("entryId").asText();
-                lastPaymentId = t.path("paymentId").asText();
+                lastPaymentId = t.hasNonNull("paymentId") ? t.path("paymentId").asText() : "OPENING";
                 lastType = t.path("type").asText();
                 lastSigned = signed;
                 lastBalanceAfter = t.path("balanceAfter").asText();
@@ -86,7 +90,7 @@ public class AgentWorkers {
                 e.put("type", lastType);
                 e.put("signedAmount", signed);
                 e.put("balanceAfter", lastBalanceAfter);
-                e.put("paymentId", t.path("paymentId").asText());
+                e.put("paymentId", t.hasNonNull("paymentId") ? t.path("paymentId").asText() : "OPENING");
                 evidence.add(e);
             }
         }
@@ -121,6 +125,7 @@ public class AgentWorkers {
                 + "was never appended to the ledger. Investigate the transfer/payment that should have "
                 + "written this leg.");
         int from = Math.max(0, evidence.size() - 12);
+        result.put("evidenceCount", evidence.size());
         result.put("evidence", evidence.subList(from, evidence.size()));
         return result;
     }

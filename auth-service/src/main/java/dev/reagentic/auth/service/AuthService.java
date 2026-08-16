@@ -20,16 +20,18 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
-    public String login(String email, String password) {
+    public LoginResult login(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AuthException("INVALID_CREDENTIALS", "Invalid email or password"));
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new AuthException("INVALID_CREDENTIALS", "Invalid email or password");
         }
-        return jwtService.issue(user.getEmail(), user.getRole());
+        return new LoginResult(jwtService.issue(user.getEmail(), user.getRole()), user.getRole());
     }
 
-    /** Idempotent seed of the single demo user (BCrypt hashed). */
+    public record LoginResult(String token, String role) {
+    }
+
     public void seedDemoUserIfAbsent() {
         if (userRepository.findByEmail(DemoConstants.DEMO_USER_EMAIL).isEmpty()) {
             userRepository.save(new User(
@@ -37,6 +39,16 @@ public class AuthService {
                     DemoConstants.DEMO_USER_EMAIL,
                     passwordEncoder.encode(DemoConstants.DEMO_USER_PASSWORD),
                     DemoConstants.DEMO_USER_ROLE));
+        }
+    }
+
+    public void seedEmployeeIfAbsent() {
+        if (userRepository.findByEmail(DemoConstants.EMPLOYEE_USER_EMAIL).isEmpty()) {
+            userRepository.save(new User(
+                    DemoConstants.EMPLOYEE_USER_ID,
+                    DemoConstants.EMPLOYEE_USER_EMAIL,
+                    passwordEncoder.encode(DemoConstants.EMPLOYEE_USER_PASSWORD),
+                    DemoConstants.EMPLOYEE_USER_ROLE));
         }
     }
 

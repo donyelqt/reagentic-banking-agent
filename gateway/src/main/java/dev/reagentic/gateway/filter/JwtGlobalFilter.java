@@ -39,11 +39,15 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange, String code, String message) {
+        return writeJson(exchange, HttpStatus.UNAUTHORIZED, code, message);
+    }
+
+    private Mono<Void> writeJson(ServerWebExchange exchange, HttpStatus status, String code, String message) {
         ServerHttpResponse response = exchange.getResponse();
-        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+        response.setStatusCode(status);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        byte[] body = ("{\"status\":401,\"code\":\"" + code + "\",\"message\":\"" + message + "\"}")
-                .getBytes(StandardCharsets.UTF_8);
+        String json = "{\"status\":" + status.value() + ",\"code\":\"" + code + "\",\"message\":\"" + message + "\"}";
+        byte[] body = json.getBytes(StandardCharsets.UTF_8);
         return response.writeWith(Mono.just(response.bufferFactory().wrap(body)));
     }
 

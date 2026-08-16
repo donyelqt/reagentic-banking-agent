@@ -208,8 +208,11 @@ services:
       ACCOUNT_SERVICE_URL: ${ACCOUNT_SERVICE_URL}
       LEDGER_SERVICE_URL: ${LEDGER_SERVICE_URL}
       PAYMENT_SERVICE_URL: ${PAYMENT_SERVICE_URL}
+      AGENT_PROVIDER: ${AGENT_PROVIDER:-gemini}
       SPRING_AI_OLLAMA_BASE_URL: ${SPRING_AI_OLLAMA_BASE_URL}
       JAVA_TOOL_OPTIONS: "-Xmx512m"
+    env_file:
+      - .env
     depends_on:
       account-service:
         condition: service_healthy

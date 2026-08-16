@@ -16,6 +16,23 @@ The `ai-agent` calls the backend **directly** (service-to-service) via
 fronts the external frontend→agent hop. Every service re-verifies the JWT
 (**zero internal trust**).
 
+`/api/agent/**` serves **both** roles with a per-role tool matrix enforced in the
+executor (the caller's role comes from the verified JWT, not the client):
+
+| Tool | USER (customer) | EMPLOYEE (ops) |
+|---|---|---|
+| `listAccounts` | own accounts | own (none seeded) |
+| `getBalance` | ownership-scoped endpoint | internal endpoint, any account |
+| `listTransactions` | ownership-scoped endpoint | internal endpoint, any account |
+| `transferFunds` | ✅ with approval (`pendingSteps`) | ❌ denied — investigation-only |
+| `reconcileAccount` | ❌ denied — ops only | ✅ evidence + corrective entry |
+
+The agent's internal reads (`/api/accounts/internal/**`, `/api/ledger/internal/**`)
+are EMPLOYEE-only at the service layer — a USER token can never reach a
+cross-account read, even if the planner proposes it. The customer-facing
+`/api/ledger/{accountId}` is ownership-scoped via a delegated check against
+account-service (other accounts → 404).
+
 ## Data flow — a transfer
 1. `payment-service` runs the saga: `debit(source)` → `credit(dest)`, each with a
    **distinct** `idempotencyKey`; on credit failure it compensates (credits
@@ -36,8 +53,20 @@ fronts the external frontend→agent hop. Every service re-verifies the JWT
   append — the deterministic "missing leg" break for the demo.
 
 ## Agent
-Deterministic planner + hand-rolled executor (the spec's sanctioned MVP boot
-path; works with **no LLM**). Workers are typed REST clients over the real
-backend: `listAccounts`, `getBalance`, `listTransactions`, `transferFunds`,
-`reconcileAccount`. Mutating steps become `pendingSteps` requiring explicit
-approval; the frontend re-calls with the same `plan` + approved `stepIds`.
+
+One agent, two role surfaces. Primary planner is `LlmPlanner` using Spring AI's
+`google-genai` starter (`AGENT_PROVIDER=gemini` default, key via
+`AGENT_GEMINI_API_KEY`, model via `AGENT_GEMINI_MODEL`, wired through
+`spring.ai.google.genai.*`); local Ollama is an alternative provider
+(`AGENT_PROVIDER=ollama` + `SPRING_AI_OLLAMA_BASE_URL`). Spring AI 1.1.x ships the
+Google GenAI starter (`GoogleGenAiChatModel`); the stack pins the 1.1.8 BOM with
+Boot 3.5.16 / Spring Cloud 2025.0.3. With no key, the starter's sentinel default
+(`not-set`) keeps the context boot-safe and `LlmPlanner` drops to keyword-only.
+The deterministic `KeywordPlanner` is the mandatory safety net — any LLM failure
+(unreachable model, missing key, unparseable output) falls back to it, so the
+demo never hard-fails. The executor runs
+the plan DAG; workers are typed REST clients over the real backend.
+Mutating steps become `pendingSteps` requiring explicit approval; the frontend
+re-calls with the same `plan` + approved `stepIds` and idempotency key.
+`reconcileAccount` (ops) replies with the root cause, a 12-entry evidence
+trail, and a proposed corrective journal entry (not executed).

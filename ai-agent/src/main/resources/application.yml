@@ -4,6 +4,28 @@ server:
 spring:
   application:
     name: ai-agent
+  ai:
+    google:
+      genai:
+        api-key: ${AGENT_GEMINI_API_KEY:not-set}
+        chat:
+          options:
+            model: ${AGENT_GEMINI_MODEL:gemini-2.5-flash}
+            temperature: 0.0
+            response-mime-type: application/json
+    ollama:
+      base-url: ${SPRING_AI_OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        model: ${SPRING_AI_OLLAMA_MODEL:llama3.1:8b}
+        options:
+          temperature: 0.0
+    retry:
+      max-attempts: 1
+
+agent:
+  provider: ${AGENT_PROVIDER:gemini}
+  gemini:
+    api-key: ${AGENT_GEMINI_API_KEY:}
 
 management:
   endpoints:

@@ -1,7 +1,5 @@
 package dev.reagentic.common.events;
 
-import dev.reagentic.common.money.Money;
-
 import java.time.Instant;
 
 /**

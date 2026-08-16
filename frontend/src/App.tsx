@@ -7,6 +7,7 @@ import AgentChat from './components/AgentChat'
 import { Brand } from './components/Brand'
 import { getAccounts } from './api'
 import type { AccountView } from './types'
+import FloatingChat from './components/FloatingChat'
 
 type View = 'dashboard' | 'transfer' | 'agent'
 
@@ -71,6 +72,7 @@ export default function App() {
           {view === 'agent' && <AgentChat />}
         </div>
       </main>
+      {view !== 'agent' && <FloatingChat onExpand={() => setView('agent')} />}
     </div>
   )
 }

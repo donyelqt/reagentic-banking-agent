@@ -25,7 +25,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
         <main className="flex-1 grid lg:grid-cols-2 items-center gap-12 px-6 md:px-10 max-w-7xl mx-auto w-full py-10">
           <div>
             <Reveal delay={0}>
-              <span className="chip glass-dark !text-white/80 !border-white/15">
+              <span className="chip glass-dark !bg-black/40 !text-white/80 !border-white/15">
                 <span className="w-1.5 h-1.5 rounded-full bg-pos" /> Agentic private banking
               </span>
             </Reveal>
@@ -87,7 +87,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
           <div className="flex flex-wrap gap-3">
             {['Text & voice commands', 'Human-approved transfers', 'Real-time immutable ledger'].map((f, i) => (
               <Reveal key={f} delay={520 + i * 90}>
-                <span className="chip glass-dark !text-white/80 !border-white/15">{f}</span>
+                <span className="chip glass-dark !bg-black/40 !text-white/80 !border-white/15">{f}</span>
               </Reveal>
             ))}
           </div>

@@ -17,7 +17,7 @@ public class AgentService {
         this.executor = executor;
     }
 
-    public AgentResponse chat(ChatRequest req, String token, String role) {
+    public AgentResponse chat(ChatRequest req, String token) {
         Plan plan;
         List<String> approved;
         if (req.plan() != null && !req.plan().isEmpty()) {
@@ -27,7 +27,7 @@ public class AgentService {
             plan = planner.plan(req.message());
             approved = List.of();
         }
-        Executor.ExecResult exec = executor.execute(plan, approved, token, role);
+        Executor.ExecResult exec = executor.execute(plan, approved, token);
         String reply = buildReply(plan, exec, req.message());
         return new AgentResponse(plan.steps(), exec.results(), exec.pending(), reply);
     }

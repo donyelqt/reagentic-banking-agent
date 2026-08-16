@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { getLedger } from '../api'
 import type { AccountView, LedgerEntry } from '../types'
 import { useCountUp } from '../lib/useCountUp'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 export default function Dashboard({ accounts, onTransfer }: { accounts: AccountView[]; onTransfer: () => void }) {
+  const [allActivity, setAllActivity] = useState<LedgerEntry[]>([])
   const [activity, setActivity] = useState<LedgerEntry[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -13,6 +15,7 @@ export default function Dashboard({ accounts, onTransfer }: { accounts: AccountV
       .then((lists) => {
         if (cancelled) return
         const all = lists.flat().sort((a: LedgerEntry, b: LedgerEntry) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+        setAllActivity(all)
         setActivity(all.slice(0, 6))
       })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -33,17 +36,62 @@ export default function Dashboard({ accounts, onTransfer }: { accounts: AccountV
         {accounts.map((a, i) => <AccountCard key={a.accountId} account={a} index={i} />)}
       </div>
 
-      <div className="card mt-6 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl">Recent activity</h2>
-          <span className="chip">Live ledger</span>
+      <div className="grid lg:grid-cols-2 gap-6 mt-6">
+        <div className="card p-6 flex flex-col">
+          <div className="mb-6">
+            <h2 className="text-xl">Cash flow</h2>
+            <p className="text-sm text-muted">Income vs expenses</p>
+          </div>
+          <div className="flex-1 min-h-[300px]">
+             {loading ? <div className="grid place-items-center h-full shimmer rounded-lg" /> : <SpendingChart data={allActivity} />}
+          </div>
         </div>
-        {loading ? <ActivitySkeleton /> : activity.length === 0 ? <p className="text-muted text-sm">No movements yet.</p> :
-          <ul className="divide-y divide-line">
-            {activity.map((e) => <ActivityRow key={e.entryId} e={e} />)}
-          </ul>}
+
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl">Recent activity</h2>
+            <span className="chip">Live ledger</span>
+          </div>
+          {loading ? <ActivitySkeleton /> : activity.length === 0 ? <p className="text-muted text-sm">No movements yet.</p> :
+            <ul className="divide-y divide-line">
+              {activity.map((e) => <ActivityRow key={e.entryId} e={e} />)}
+            </ul>}
+        </div>
       </div>
     </div>
+  )
+}
+
+function SpendingChart({ data }: { data: LedgerEntry[] }) {
+  // Aggregate data by date
+  const agg = data.reduce((acc, cur) => {
+    // Treat createdAt as milliseconds
+    const date = new Date(cur.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    if (!acc[date]) acc[date] = { date, income: 0, expense: 0 }
+    
+    const amt = parseFloat(cur.signedAmount || '0')
+    if (amt > 0) acc[date].income += amt
+    else acc[date].expense += Math.abs(amt)
+    
+    return acc
+  }, {} as Record<string, { date: string, income: number, expense: number }>)
+  
+  // Sort by date (ascending for chart)
+  const chartData = Object.values(agg).reverse()
+  
+  if (chartData.length === 0) return <div className="grid place-items-center h-full text-muted text-sm border border-dashed border-line rounded-lg">Not enough data to display chart.</div>
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dy={10} />
+        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dx={-10} tickFormatter={(v) => `$${v}`} />
+        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
+        <Bar dataKey="income" name="Income" fill="#0CA678" radius={[4, 4, 0, 0]} maxBarSize={40} />
+        <Bar dataKey="expense" name="Expense" fill="#E5484D" radius={[4, 4, 0, 0]} maxBarSize={40} />
+      </BarChart>
+    </ResponsiveContainer>
   )
 }
 

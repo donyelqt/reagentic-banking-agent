@@ -1,18 +1,15 @@
 package dev.reagentic.ai.agent;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.reagentic.common.DemoConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.google.genai.GoogleGenAiChatModel;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,13 +20,19 @@ import java.util.UUID;
 
 /**
  * Primary planner: turns a natural-language request into a plan DAG via an LLM.
- * The provider is selected with {@code SPRING_AI_PROVIDER}:
+ * The provider is selected with {@code agent.provider}:
  * <ul>
- *   <li>{@code gemini} (default) — Google Gemini REST API
- *       ({@code SPRING_AI_GEMINI_API_KEY}, {@code SPRING_AI_GEMINI_MODEL})</li>
- *   <li>{@code ollama} — local Ollama via Spring AI
- *       ({@code SPRING_AI_OLLAMA_BASE_URL}, {@code SPRING_AI_OLLAMA_MODEL})</li>
+ *   <li>{@code gemini} (default) - Spring AI Google GenAI starter
+ *       ({@code spring.ai.google.genai.*}, key via {@code AGENT_GEMINI_API_KEY})</li>
+ *   <li>{@code ollama} - Spring AI Ollama starter ({@code spring.ai.ollama.*})</li>
  * </ul>
+ *
+ * Both starter autoconfigs are active by default ({@code spring.ai.model.chat}
+ * is left unset, so each {@code matchIfMissing=true} conditional applies); the
+ * planner selects the provider with {@link ObjectProvider}. A missing Gemini
+ * API key is handled by a non-blank placeholder in application.yml so the
+ * autoconfig does not fail the context at boot; this planner then checks the
+ * real key property and falls back to the deterministic {@link KeywordPlanner}.
  *
  * The LLM is the primary path, but the deterministic {@link KeywordPlanner} is
  * the MANDATORY safety net: any failure (model unreachable, missing api key,
@@ -46,53 +49,73 @@ public class LlmPlanner implements Planner {
             "listAccounts", "getBalance", "listTransactions", "transferFunds", "reconcileAccount");
 
     private final KeywordPlanner keywordPlanner;
-    private final ChatClient chatClient;
-    private final GeminiApi geminiApi;
+    private final ChatClient geminiChatClient;
+    private final ChatClient ollamaChatClient;
     private final String provider;
 
-    public LlmPlanner(ObjectProvider<OllamaChatModel> ollama,
+    public LlmPlanner(ObjectProvider<GoogleGenAiChatModel> gemini,
+                      ObjectProvider<OllamaChatModel> ollama,
                       KeywordPlanner keywordPlanner,
-                      @Value("${SPRING_AI_PROVIDER:gemini}") String provider,
-                      @Value("${SPRING_AI_GEMINI_API_KEY:}") String geminiApiKey,
-                      @Value("${SPRING_AI_GEMINI_MODEL:gemini-2.5-flash}") String geminiModel,
-                      @Value("${SPRING_AI_GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}") String geminiBaseUrl,
-                      ObjectMapper objectMapper) {
+                      @Value("${agent.provider:gemini}") String provider,
+                      @Value("${agent.gemini.api-key:}") String geminiApiKey) {
         this.keywordPlanner = keywordPlanner;
         this.provider = provider == null ? "gemini" : provider.trim().toLowerCase();
         if ("gemini".equals(this.provider)) {
             if (geminiApiKey == null || geminiApiKey.isBlank()) {
-                this.geminiApi = null;
-                this.chatClient = null;
-                log.warn("SPRING_AI_PROVIDER=gemini but SPRING_AI_GEMINI_API_KEY is not set - "
+                this.geminiChatClient = null;
+                this.ollamaChatClient = null;
+                log.warn("agent.provider=gemini but agent.gemini.api-key is not set - "
                         + "using the deterministic keyword planner only");
             } else {
-                this.geminiApi = new GeminiApi(geminiBaseUrl, geminiModel, geminiApiKey, objectMapper);
-                this.chatClient = null;
-                log.info("LLM planner using provider 'gemini' (model {})", geminiModel);
+                GoogleGenAiChatModel model = gemini.getIfAvailable();
+                if (model == null) {
+                    this.geminiChatClient = null;
+                    this.ollamaChatClient = null;
+                    log.warn("agent.provider=gemini but no GoogleGenAiChatModel bean is available - "
+                            + "using the deterministic keyword planner only");
+                } else {
+                    this.geminiChatClient = ChatClient.create(model);
+                    this.ollamaChatClient = null;
+                    log.info("LLM planner using provider 'gemini' (Spring AI Google GenAI)");
+                }
             }
         } else if ("ollama".equals(this.provider)) {
             OllamaChatModel model = ollama.getIfAvailable();
             if (model == null) {
-                this.geminiApi = null;
-                this.chatClient = null;
-                log.warn("SPRING_AI_PROVIDER=ollama but no Ollama model is configured - "
-                        + "using the deterministic keyword planner only");
+                this.geminiChatClient = null;
+                this.ollamaChatClient = null;
+                log.warn("agent.provider=ollama but no OllamaChatModel bean is available "
+                        + "(enable it with spring.ai.model.chat=ollama and set "
+                        + "spring.ai.ollama.chat.model) - using the deterministic keyword planner only");
             } else {
-                this.geminiApi = null;
-                this.chatClient = ChatClient.create(model);
+                this.geminiChatClient = null;
+                this.ollamaChatClient = ChatClient.create(model);
                 log.info("LLM planner using provider 'ollama'");
             }
         } else {
-            this.geminiApi = null;
-            this.chatClient = null;
-            log.warn("Unknown SPRING_AI_PROVIDER '{}' - using the deterministic keyword planner only", this.provider);
+            this.geminiChatClient = null;
+            this.ollamaChatClient = null;
+            log.warn("Unknown agent.provider '{}' - using the deterministic keyword planner only", this.provider);
         }
+    }
+
+    /** Testing seam: true when the Gemini ChatClient was wired. */
+    boolean isGeminiConfigured() {
+        return geminiChatClient != null;
+    }
+
+    /** Testing seam: true when the Ollama ChatClient was wired. */
+    boolean isOllamaConfigured() {
+        return ollamaChatClient != null;
     }
 
     @Override
     public Plan plan(String message) {
         if (message == null || message.isBlank()) {
             return new Plan(List.of());
+        }
+        if (geminiChatClient == null && ollamaChatClient == null) {
+            return keywordPlanner.plan(message);
         }
         try {
             PlanDto dto = callLlm(message);
@@ -108,15 +131,8 @@ public class LlmPlanner implements Planner {
     }
 
     private PlanDto callLlm(String message) {
-        if ("gemini".equals(provider)) {
-            String text = geminiApi.chat(SYSTEM_PROMPT + "\n\nUser request: " + message);
-            try {
-                return geminiApi.objectMapper.readValue(text, PlanDto.class);
-            } catch (Exception e) {
-                throw new RuntimeException("gemini returned unparseable plan: " + e.getMessage(), e);
-            }
-        }
-        return chatClient.prompt()
+        ChatClient client = "gemini".equals(provider) ? geminiChatClient : ollamaChatClient;
+        return client.prompt()
                 .system(SYSTEM_PROMPT)
                 .user(u -> u.text("User request: {msg}").param("msg", message))
                 .call()
@@ -184,57 +200,4 @@ public class LlmPlanner implements Planner {
               - dependsOn is a list of stepIds that must run first (omit if none).
               - Output ONLY the plan object; it will be parsed automatically.
             """;
-
-    /**
-     * Minimal Google Gemini REST client (generativelanguage.googleapis.com).
-     * Uses the same JSON-first pattern as the rest of the agent; no extra
-     * Spring AI module required (the Gemini starter needs Spring AI 1.1+).
-     */
-    private static final class GeminiApi {
-
-        private final RestClient client;
-        private final ObjectMapper objectMapper;
-        private final String model;
-        private final String apiKey;
-
-        GeminiApi(String baseUrl, String model, String apiKey, ObjectMapper objectMapper) {
-            this.model = model;
-            this.apiKey = apiKey;
-            this.objectMapper = objectMapper;
-            this.client = RestClient.builder().baseUrl(baseUrl).build();
-        }
-
-        String chat(String prompt) {
-            String body = """
-                    {"contents":[{"role":"user","parts":[{"text":"%s"}]}],
-                     "generationConfig":{"temperature":0.0,"responseMimeType":"application/json"}}
-                    """.formatted(escape(prompt));
-            String resp = client.post()
-                    .uri("/models/{model}:generateContent?key={key}", model, apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
-            return extractText(resp);
-        }
-
-        private String extractText(String resp) {
-            JsonNode root;
-            try {
-                root = objectMapper.readTree(resp);
-            } catch (Exception e) {
-                throw new RuntimeException("gemini returned unparseable response: " + e.getMessage(), e);
-            }
-            JsonNode text = root.path("candidates").path(0).path("content").path("parts").path(0).path("text");
-            if (text.isMissingNode() || text.isNull()) {
-                throw new RuntimeException("gemini returned no text: "
-                        + root.path("promptFeedback").path("blockReason").asText("unknown reason"));
-            }
-            return text.asText();
-        }
-
-        private String escape(String s) {
-            return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
-        }
-    }
 }

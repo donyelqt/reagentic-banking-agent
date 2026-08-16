@@ -48,12 +48,14 @@ Each service reads env vars (`JWT_SECRET`, `*_DB_URL`, `KAFKA_BOOTSTRAP_SERVERS`
 One system, two roles (see `docs/ideas/two-role-agent-access-model.md`):
 
 - **USER** keeps the ownership-scoped customer path (accounts, balances,
-  supervised transfers) untouched. The Agent tab is hidden and `/api/agent/**`
-  returns 403.
-- **EMPLOYEE** gets the ops console. `/api/agent` is double-guarded
-  (gateway `hasRole` + ai-agent security), and the agent's cross-account reads
+  supervised transfers) **plus a personal agent**: balances, transactions,
+  and transfers with an explicit approval gate. Cross-account tools
+  (`reconcileAccount`, internal reads) are denied with a clear message.
+- **EMPLOYEE** gets the ops console: `reconcileAccount` over any account with
+  root-cause evidence, and the internal reads that power it
   (`/api/accounts/internal/**`, `/api/ledger/internal/**`) are EMPLOYEE-only at
-  the service layer too, so a customer token can never reach them.
+  the service layer — a customer token can never reach them. Ops cannot move
+  customer money (transfers are denied for EMPLOYEE).
 
 ## The hero use case
 

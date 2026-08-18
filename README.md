@@ -4,6 +4,10 @@ A small but **real** online-banking system (our demo "Reagentic Bank") built as
 Java/Spring Boot microservices, with an **AI assistant wired into the real
 backend**. Balances are numbers in PostgreSQL — no real money.
 
+> **Positioning:** an AI that can move money — but only when a human says so, and it can prove
+> every step. Product direction, scope decisions, and roadmap live in
+> [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md).
+
 > Demo users: customer `demo@bank.dev` / `demo1234` (USER) · ops analyst `ops@bank.dev` / `ops1234` (EMPLOYEE). Accounts: Checking `acc-checking-0001` ($1000.00), Savings `acc-savings-0002` ($500.00).
 
 ## Stack
@@ -71,6 +75,7 @@ One system, two roles (see `docs/ideas/two-role-agent-access-model.md`):
    once).
 
 ## Docs
+- [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md) — product direction, decisions, roadmap (canonical)
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/deployment.md`](docs/deployment.md)
 - [`docs/demo-runbook.md`](docs/demo-runbook.md)

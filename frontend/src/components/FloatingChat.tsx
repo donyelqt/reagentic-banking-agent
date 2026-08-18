@@ -2,12 +2,15 @@ import { useState, useRef, useEffect } from 'react'
 import { agentChat } from '../api'
 import type { AgentResponse } from '../types'
 import ApprovalModal from './ApprovalModal'
+import { isCapabilityQuestion, capabilityReply, introChips, actionChips, followUpChips } from '../lib/chatPrompts'
 
-const GREETING = "Hello! I'm your banking agent. How can I assist you today?"
+const GREETING = "Hello! I'm your banking agent. I can check balances, show your transactions, and move money between your accounts - transfers always wait for your approval."
+
+interface Msg { role: 'user' | 'agent'; text: string; chips?: string[] }
 
 export default function FloatingChat({ onExpand }: { onExpand: () => void }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<{ role: 'user' | 'agent'; text: string }[]>([
+  const [messages, setMessages] = useState<Msg[]>([
     { role: 'agent', text: GREETING }
   ])
   const [input, setInput] = useState('')
@@ -19,33 +22,42 @@ export default function FloatingChat({ onExpand }: { onExpand: () => void }) {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, busy, isOpen])
 
-  async function send(text: string, body?: any) {
+  async function send(text: string, body?: any, chips?: string[]) {
     setBusy(true)
     try {
       const json: any = await agentChat(body ?? { message: text })
       const data: AgentResponse = json?.data ?? json
       setLast(data)
       const reply = data?.reply?.trim()
-      if (reply) setMessages((m) => [...m, { role: 'agent', text: reply }])
+      if (reply) setMessages((m) => [...m, { role: 'agent', text: reply, chips }])
+      return data
     } finally {
       setBusy(false)
     }
   }
 
-  function onSend(e: React.FormEvent) {
-    e.preventDefault()
-    const t = input.trim()
+  function handlePrompt(text: string) {
+    const t = text.trim()
     if (!t) return
     setMessages((m) => [...m, { role: 'user', text: t }])
     setInput('')
-    send(t)
+    if (isCapabilityQuestion(t)) {
+      setMessages((m) => [...m, { role: 'agent', text: capabilityReply(false), chips: actionChips(false) }])
+      return
+    }
+    send(t, { message: t }, followUpChips(false, t))
+  }
+
+  function onSend(e: React.FormEvent) {
+    e.preventDefault()
+    handlePrompt(input)
   }
 
   function onApprove() {
     if (!last) return
     const ids = last.pendingSteps.map((s) => s.stepId)
     setMessages((m) => [...m, { role: 'user', text: 'Approved: ' + ids.join(', ') }])
-    send('', { plan: last.plan, approval: ids })
+    send('', { plan: last.plan, approval: ids }, followUpChips(false, 'Approved: ' + ids.join(', ')))
   }
 
   return (
@@ -69,9 +81,23 @@ export default function FloatingChat({ onExpand }: { onExpand: () => void }) {
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} bubble-in`}>
-                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${m.role === 'user' ? 'bg-[#2D43F5] text-white shadow-soft rounded-br-md' : 'bg-black/40 border border-white/10 text-white/90 rounded-bl-md'}`}>
-                  {m.text}
-                </div>
+                {m.role === 'user' ? (
+                  <div className="max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed bg-[#2D43F5] text-white shadow-soft rounded-br-md">{m.text}</div>
+                ) : (
+                  <div className="max-w-[85%]">
+                    <div className="rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-line bg-black/40 border border-white/10 text-white/90 rounded-bl-md">{m.text}</div>
+                    {m.chips && m.chips.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {m.chips.map((c) => (
+                          <button key={c} onClick={() => handlePrompt(c)} disabled={busy}
+                            className="text-[11px] px-3 py-1.5 rounded-full border border-accent/60 bg-white/10 text-white hover:bg-accent hover:border-accent hover:-translate-y-0.5 transition disabled:opacity-50">
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             {busy && (
@@ -85,6 +111,15 @@ export default function FloatingChat({ onExpand }: { onExpand: () => void }) {
           
           {last && last.pendingSteps.length > 0 && (
              <ApprovalModal steps={last.pendingSteps} onApprove={onApprove} onCancel={() => setLast(null)} />
+          )}
+
+          {messages.length === 1 && (
+            <div className="px-4 pb-3 pt-1 flex justify-center">
+              <button onClick={() => handlePrompt(introChips()[0])} disabled={busy}
+                className="px-4 py-1.5 rounded-full border-2 border-dashed border-accent/70 text-accent font-medium text-xs hover:bg-accent hover:text-white hover:border-accent hover:border-solid transition cursor-pointer disabled:opacity-50">
+                {introChips()[0]}
+              </button>
+            </div>
           )}
 
           <form onSubmit={onSend} className="p-3 border-t border-white/10 bg-black/20 flex gap-2">

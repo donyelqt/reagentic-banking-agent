@@ -35,6 +35,3 @@ frontend/dist/
 
 # Logs
 *.log
-
-# Local attribution reference (not part of product docs)
-CONTRIBUTIONS.md

@@ -160,9 +160,3 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 - Charts library choice (Recharts is the pitch's suggestion — confirm) and chart data contract with `/classify`
 - Whether the seed history lives in ledger-service migration or account-service (ledger is the source for chart data)
 - Demo-day LLM provider: Gemini key set, or deterministic fallback presented knowingly
-
-## 15. Team Context
-
-Team project (Accenture Cloud Elite cohort). The insight arc was adopted from the team's
-Aug 16 pitch; the Gemini classification/context work and frontend chat components were
-contributed by teammates and are in main. Attribution lives in git history, not here.

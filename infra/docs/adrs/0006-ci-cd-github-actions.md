@@ -18,8 +18,9 @@ through `docker-compose`.
 Requirements driving the decision:
 - Every change must pass automated quality gates before merge (per the
   `ci-cd-and-automation` standard: lint/typecheck, unit tests, build).
-- Zero infrastructure to operate — the team has no ops capacity to babysit a
-  CI server.
+- Zero infrastructure to operate — the team runs infra (docker-compose,
+  Terraform, AKS manifests) but has no dedicated ops role: every hour spent
+  maintaining a CI server is a dev hour taken from demo delivery.
 - Gated branches: `main` (release) and `donieledev` (active dev branch).
 - Future deploy path must support short-lived credentials (OIDC into Azure),
   no long-lived secrets in the repo.
@@ -45,11 +46,13 @@ queue stale builds. `permissions: contents: read` (least privilege).
 
 ### Jenkins
 - Pros: Fully self-hosted, mature plugin ecosystem, no per-minute cost.
-- Cons: Requires a server to operate, patch, and secure; webhook plumbing to
-  GitHub; no native OIDC federation; a full pipeline is overkill for a team
-  with no ops capacity.
-- Rejected: Infrastructure tax with zero compensating requirement
-  (no on-prem or compliance constraints).
+- Cons: Requires a dedicated server to keep patched, secured, and available —
+  recurring maintenance hours (patching, TLS, storage, uptime, backups) that
+  produce no new capability here; webhook plumbing to GitHub; no native OIDC
+  federation.
+- Rejected: Self-hosting tax with zero compensating requirement — no on-prem,
+  compliance, or data-residency constraints force it, and hosted CI delivers
+  identical gates without the maintenance burden.
 
 ### GitLab CI
 - Pros: Native `.gitlab-ci.yml`, strong pipeline features, zero managed infra.

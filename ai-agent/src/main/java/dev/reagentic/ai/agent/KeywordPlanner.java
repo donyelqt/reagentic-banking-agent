@@ -25,7 +25,7 @@ public class KeywordPlanner implements Planner {
     private static final Pattern ACC_ID = Pattern.compile("(acc-[a-z0-9-]+)");
 
     @Override
-    public Plan plan(String message) {
+    public Plan plan(String message, List<String> history) {
         String m = message == null ? "" : message.toLowerCase();
         if (m.isBlank()) {
             return new Plan(List.of());

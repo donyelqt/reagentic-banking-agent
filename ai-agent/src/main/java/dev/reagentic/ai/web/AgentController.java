@@ -3,6 +3,9 @@ package dev.reagentic.ai.web;
 import dev.reagentic.ai.agent.AgentResponse;
 import dev.reagentic.ai.agent.AgentService;
 import dev.reagentic.ai.agent.ChatRequest;
+import dev.reagentic.ai.agent.ClassifyRequest;
+import dev.reagentic.ai.agent.ClassifyResponse;
+import dev.reagentic.ai.agent.TransactionClassificationService;
 import dev.reagentic.common.security.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 public class AgentController {
 
     private final AgentService agentService;
+    private final TransactionClassificationService classificationService;
 
-    public AgentController(AgentService agentService) {
+    public AgentController(AgentService agentService, TransactionClassificationService classificationService) {
         this.agentService = agentService;
+        this.classificationService = classificationService;
     }
 
     @PostMapping("/chat")
@@ -28,6 +33,11 @@ public class AgentController {
             throw new MissingTokenException();
         }
         return agentService.chat(req, token, roleOf(auth));
+    }
+
+    @PostMapping("/classify")
+    public ClassifyResponse classify(@RequestBody ClassifyRequest req) {
+        return classificationService.classify(req.transactions());
     }
 
     private String roleOf(Authentication auth) {

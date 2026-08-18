@@ -166,4 +166,4 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 - **Khrystel Aguila** — team pitch that originated the insight arc (spending visualization, concierge chat); frontend work including `FloatingChat` (in main via PR #2)
 - **John Aaron Garcia (garciajam)** — Gemini integration, transaction classification, chat context management (PR #1, merged)
 - **To-do workstreams (peer doc, Aug 16)** — charts, CSV, CI/CD, and test-suite items tracked for the team sprint
-- **Doniele** — platform architecture, reconciliation, dual-role model, and the PR #3 hardening pass (approval enforcement, classify validation, 1:1 contract)
+- **Doniele** — authored the platform end-to-end: initial 7-service monorepo and architecture, all infrastructure (Docker Compose, Postgres/Kafka setup, health checks), the reconciliation engine (evidence trail + proposed corrective journal), the dual-role security model, and the agent core (planner/executor/approval gate); plus the PR #3 hardening pass (approval enforcement, classify validation, 1:1 contract)

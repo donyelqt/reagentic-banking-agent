@@ -51,9 +51,11 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
     e.preventDefault();
     const t = input.trim();
     if (!t) return;
+    const message = buildMessage(t);
+    const history = messages.slice(-6).map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.text}`);
     setMessages((m) => [...m, { role: "user", text: t }]);
     setInput("");
-    send(buildMessage(t));
+    send(message, { message, history });
   }
 
   function onApprove() {

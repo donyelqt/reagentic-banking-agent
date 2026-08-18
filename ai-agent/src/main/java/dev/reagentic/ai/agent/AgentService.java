@@ -23,7 +23,7 @@ public class AgentService {
             plan = new Plan(req.plan());
             approved = req.approval() == null ? List.of() : req.approval();
         } else {
-            plan = planner.plan(req.message());
+            plan = planner.plan(req.message(), req.history());
             approved = List.of();
         }
         Executor.ExecResult exec = executor.execute(plan, approved, token, role);

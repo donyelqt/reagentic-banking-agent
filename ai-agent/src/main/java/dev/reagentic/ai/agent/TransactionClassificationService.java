@@ -42,7 +42,7 @@ public class TransactionClassificationService {
             return BigDecimal.ZERO;
         }
         try {
-            return new BigDecimal(amount);
+            return new BigDecimal(amount.replace(",", ""));
         } catch (NumberFormatException e) {
             return BigDecimal.ZERO;
         }

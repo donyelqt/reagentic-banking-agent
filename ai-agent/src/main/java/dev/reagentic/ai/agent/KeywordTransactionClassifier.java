@@ -51,6 +51,9 @@ public class KeywordTransactionClassifier implements TransactionClassifier {
             return results;
         }
         for (TransactionInput t : transactions) {
+            if (t == null) {
+                continue;
+            }
             results.add(new ClassifiedTransaction(t.description(), t.amount(), categorize(t)));
         }
         return results;

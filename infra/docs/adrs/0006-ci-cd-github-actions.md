@@ -6,6 +6,9 @@ Accepted
 ## Date
 2026-08-19
 
+## Owner
+Doniele (decision-maker & infrastructure owner)
+
 ## Context
 The repository (`donyelqt/reagentic-banking-agent`) has no CI pipeline today. It is a
 7-service Spring Boot monorepo (8 Maven modules: `common`, `auth-service`,
@@ -41,6 +44,26 @@ added as follow-ups (see Consequences).
 Runs on `pull_request` and `push` to `main` and `donieledev`, with
 `concurrency.cancel-in-progress` so rapid pushes on the dev branch do not
 queue stale builds. `permissions: contents: read` (least privilege).
+
+## Architecture & Infrastructure Judgement
+The judgement behind this ADR, stated directly:
+
+- **Why I stand behind this decision.** CI is the enforcement mechanism for
+  every engineering decision in this repo — no change reaches `main` without
+  the gates in the Decision table. The principle underneath: gates must match
+  repository reality, because a pipeline that does not run on every PR and
+  push is a placebo, and invented gates (lint/test scripts that don't exist)
+  teach the team to ignore red. That is why nothing here is fabricated and
+  nothing is skipped.
+- **What this decision accepts, consciously.** Hosted CI over self-hosted is
+  a trade, not a capability question — the infra skills exist (docker-compose,
+  Terraform, AKS). The maintenance trade against Jenkins is laid out in
+  Alternatives; I accept it because every maintenance hour is measured
+  against the ~1-week engagement window (see ADR-0001).
+- **Boundary of the judgement.** One workflow now. `deploy.yml` and
+  `rollback.yml` are triggers, not features — they arrive only when Azure
+  targets exist (credentials via OIDC, per Consequences), and per-service CI
+  only when the pipeline crosses ~10 minutes.
 
 ## Alternatives Considered
 

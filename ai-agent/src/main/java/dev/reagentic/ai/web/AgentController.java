@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/agent")
 public class AgentController {
@@ -36,8 +38,13 @@ public class AgentController {
     }
 
     @PostMapping("/classify")
-    public ClassifyResponse classify(@RequestBody ClassifyRequest req) {
-        return classificationService.classify(req.transactions());
+    public ResponseEntity<?> classify(@RequestBody ClassifyRequest req) {
+        String error = ClassifyRequest.validate(req);
+        if (error != null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("status", 400, "code", "INVALID_CLASSIFY_REQUEST", "message", error));
+        }
+        return ResponseEntity.ok(classificationService.classify(req.transactions()));
     }
 
     private String roleOf(Authentication auth) {

@@ -6,7 +6,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -16,10 +16,12 @@ import java.util.Locale;
  * few-shot examples, and a strict "one category per input, same order" JSON contract.
  *
  * The LLM is the primary path, but {@link KeywordTransactionClassifier} is the MANDATORY
- * safety net: any failure (model unreachable, missing api key, unparseable JSON, a
- * response whose item count doesn't match the input, or an unknown category value)
- * delegates the WHOLE batch to it, mirroring the fallback contract {@link LlmPlanner}
- * already guarantees for planning.
+ * safety net. Trust is verified per item: each response entry must carry a known category
+ * AND a description matching the corresponding input, so a response that is reordered,
+ * reworded, or partially malformed can never silently mislabel money. Items the LLM
+ * drifted on are keyword-classified individually; only a response whose shape cannot be
+ * trusted at all (missing/unparseable JSON, wrong item count) delegates the WHOLE batch,
+ * mirroring the fallback contract {@link LlmPlanner} already guarantees for planning.
  */
 @Component
 @Primary
@@ -74,26 +76,51 @@ public class LlmTransactionClassifier implements TransactionClassifier {
                 .entity(ClassificationDto.class);
     }
 
-    /** Returns null (triggering fallback) if the response doesn't line up with the input 1:1. */
+    /**
+     * Maps the LLM response onto the input 1:1. Returns null (triggering whole-batch
+     * fallback) only when the response shape is untrustworthy: missing JSON or a
+     * different item count. Per-item problems (unknown category, reordered or reworded
+     * description) fall back individually to the keyword classifier so one drifted
+     * entry can never corrupt the rest of the batch.
+     */
     private List<ClassifiedTransaction> toClassified(ClassificationDto dto, List<TransactionInput> transactions) {
         if (dto == null || dto.items() == null || dto.items().size() != transactions.size()) {
             return null;
         }
-        List<ClassifiedTransaction> result = new ArrayList<>();
+        ClassifiedTransaction[] result = new ClassifiedTransaction[transactions.size()];
+        int fallbacks = 0;
         for (int i = 0; i < transactions.size(); i++) {
-            ClassificationItemDto item = dto.items().get(i);
-            if (item == null || item.category() == null) {
-                return null;
+            ClassifiedTransaction classified = toOne(dto.items().get(i), transactions.get(i));
+            if (classified == null) {
+                fallbacks++;
+                result[i] = keywordClassifier.classify(List.of(transactions.get(i))).get(0);
+            } else {
+                result[i] = classified;
             }
-            SpendingCategory category;
-            try {
-                category = SpendingCategory.valueOf(item.category().trim().toUpperCase(Locale.ROOT));
-            } catch (IllegalArgumentException e) {
-                return null; // one invalid category invalidates the whole batch -> fall back
-            }
-            result.add(new ClassifiedTransaction(transactions.get(i).description(), transactions.get(i).amount(), category));
         }
-        return result;
+        if (fallbacks > 0) {
+            log.warn("LLM classification drifted on {}/{} items (unknown category or order mismatch), " +
+                    "keyword-classified only those", fallbacks, transactions.size());
+        }
+        return Arrays.asList(result);
+    }
+
+    /** A single response entry is trusted only if it names a known category AND echoes the input description. */
+    private ClassifiedTransaction toOne(ClassificationItemDto item, TransactionInput input) {
+        if (item == null || item.category() == null || item.description() == null || input == null) {
+            return null;
+        }
+        SpendingCategory category;
+        try {
+            category = SpendingCategory.valueOf(item.category().trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        String expected = input.description() == null ? "" : input.description().trim();
+        if (!item.description().trim().equalsIgnoreCase(expected)) {
+            return null;
+        }
+        return new ClassifiedTransaction(input.description(), input.amount(), category);
     }
 
     private static final String SYSTEM_PROMPT = """

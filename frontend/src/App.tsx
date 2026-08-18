@@ -7,6 +7,7 @@ import AgentChat from "./components/AgentChat";
 import { Brand } from "./components/Brand";
 import { getAccounts, sessionFromToken } from "./api";
 import type { AccountView } from "./types";
+import FloatingChat from "./components/FloatingChat";
 
 type View = "dashboard" | "transfer" | "agent";
 
@@ -83,6 +84,7 @@ export default function App() {
           {view === "agent" && <AgentChat isEmployee={isEmployee} onAccountsChanged={() => getAccounts().then((r: any) => setAccounts(r.data ?? [])).catch(() => {})} />}
         </div>
       </main>
+      {view !== 'agent' && <FloatingChat onExpand={() => setView('agent')} />}
     </div>
   );
 }

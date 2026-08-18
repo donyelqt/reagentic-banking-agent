@@ -28,7 +28,9 @@ jobs:
           cache: maven
 
       - name: Build + unit tests (all modules)
-        run: ./mvnw -B test
+        run: |
+          chmod +x ./mvnw
+          ./mvnw -B test
 
   frontend:
     name: Frontend (Vite/React)
@@ -73,7 +75,9 @@ jobs:
           cache: maven
 
       - name: Package fat jars
-        run: ./mvnw -B package -DskipTests
+        run: |
+          chmod +x ./mvnw
+          ./mvnw -B package -DskipTests
 
       - name: Build representative service image
         run: docker build -f infra/Dockerfile --build-arg MODULE=auth-service .

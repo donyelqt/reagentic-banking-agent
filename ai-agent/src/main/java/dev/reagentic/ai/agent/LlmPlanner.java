@@ -44,6 +44,8 @@ public class LlmPlanner implements Planner {
 
     private static final int HISTORY_WINDOW = 6;
 
+    private static final int MAX_HISTORY_LINE_LENGTH = 500;
+
     private final KeywordPlanner keywordPlanner;
     private final ChatClientProvider chatClientProvider;
 
@@ -102,14 +104,14 @@ public class LlmPlanner implements Planner {
         StringBuilder sb = new StringBuilder("Conversation so far:\n");
         for (String line : history.subList(from, history.size())) {
             if (line != null && !line.isBlank()) {
-                sb.append(line).append("\n");
+                sb.append(line, 0, Math.min(line.length(), MAX_HISTORY_LINE_LENGTH)).append("\n");
             }
         }
         sb.append("User request: ").append(message);
         return sb.toString();
     }
 
-    private Plan toPlan(PlanDto dto) {
+    Plan toPlan(PlanDto dto) {
         if (dto == null || dto.steps() == null) {
             return null;
         }
@@ -122,10 +124,15 @@ public class LlmPlanner implements Planner {
             Map<String, Object> args = s.args() == null ? new HashMap<>() : new HashMap<>(s.args());
             normalizeAccounts(args);
             String idem = s.idempotencyKey();
+            boolean confirmationRequired = s.confirmationRequired();
             if ("transferFunds".equals(s.tool())) {
                 if (!args.containsKey("from") || !args.containsKey("to") || !args.containsKey("amount")) {
                     return null;
                 }
+                // Enforced invariant: money movement always waits for explicit approval,
+                // regardless of what the LLM returned. The approval gate is a backend
+                // guarantee, not a model suggestion.
+                confirmationRequired = true;
                 if (idem == null || idem.isBlank()) {
                     idem = UUID.randomUUID().toString();
                 }
@@ -136,7 +143,7 @@ public class LlmPlanner implements Planner {
                     s.tool(),
                     args,
                     s.dependsOn() == null ? List.of() : s.dependsOn(),
-                    s.confirmationRequired(),
+                    confirmationRequired,
                     idem));
         }
         return new Plan(steps);

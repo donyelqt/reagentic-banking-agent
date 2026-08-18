@@ -2,8 +2,9 @@ import { useState } from "react";
 import { agentChat } from "../api";
 import type { AgentResponse } from "../types";
 import ApprovalModal from "./ApprovalModal";
+import { isCapabilityQuestion, capabilityReply, introChips, actionChips, followUpChips } from "../lib/chatPrompts";
 
-interface Msg { role: "user" | "agent"; text: string }
+interface Msg { role: "user" | "agent"; text: string; chips?: string[] }
 
 const ACCOUNTS = [
   { id: "acc-checking-0001", label: "Checking (acc-checking-0001)" },
@@ -35,34 +36,42 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
     return text.trim();
   }
 
-  async function send(text: string, body?: any) {
+  async function send(text: string, body?: any, chips?: string[]) {
     setBusy(true);
     try {
       const json: any = await agentChat(body ?? { message: text });
       const data: AgentResponse = json?.data ?? json;
       setLast(data);
       const reply = data?.reply?.trim();
-      if (reply) setMessages((m) => [...m, { role: "agent", text: reply }]);
+      if (reply) setMessages((m) => [...m, { role: "agent", text: reply, chips }]);
       return data;
     } finally { setBusy(false); }
   }
 
-  function onSend(e: React.FormEvent) {
-    e.preventDefault();
-    const t = input.trim();
+  function handlePrompt(text: string) {
+    const t = text.trim();
     if (!t) return;
-    const message = buildMessage(t);
-    const history = messages.slice(-6).map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.text}`);
     setMessages((m) => [...m, { role: "user", text: t }]);
     setInput("");
-    send(message, { message, history });
+    if (isCapabilityQuestion(t)) {
+      setMessages((m) => [...m, { role: "agent", text: capabilityReply(isEmployee), chips: actionChips(isEmployee) }]);
+      return;
+    }
+    const message = buildMessage(t);
+    const history = messages.slice(-6).map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.text}`);
+    send(message, { message, history }, followUpChips(isEmployee, t));
+  }
+
+  function onSend(e: React.FormEvent) {
+    e.preventDefault();
+    handlePrompt(input);
   }
 
   function onApprove() {
     if (!last) return;
     const ids = last.pendingSteps.map((s) => s.stepId);
     setMessages((m) => [...m, { role: "user", text: "Approved: " + ids.join(", ") }]);
-    send("", { plan: last.plan, approval: ids }).then(() => onAccountsChanged?.());
+    send("", { plan: last.plan, approval: ids }, followUpChips(isEmployee, "Approved: " + ids.join(", "))).then(() => onAccountsChanged?.());
   }
 
   return (
@@ -85,7 +94,23 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
         <div className="flex-1 overflow-auto p-5 space-y-4">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} bubble-in`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line ${m.role === "user" ? "bg-[#2D43F5] text-white shadow-soft rounded-br-md" : "bg-white border border-line rounded-bl-md"}`}>{m.text}</div>
+              {m.role === "user" ? (
+                <div className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-[#2D43F5] text-white shadow-soft rounded-br-md">{m.text}</div>
+              ) : (
+                <div className="max-w-[80%]">
+                  <div className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-white border border-line rounded-bl-md">{m.text}</div>
+                  {m.chips && m.chips.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      {m.chips.map((c) => (
+                        <button key={c} onClick={() => handlePrompt(c)} disabled={busy}
+                          className="text-xs px-3.5 py-1.5 rounded-full border border-accent/35 bg-white text-ink shadow-soft hover:bg-accent hover:text-white hover:border-accent hover:-translate-y-0.5 transition disabled:opacity-50">
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           {busy && (
@@ -98,6 +123,14 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
         </div>
         {last && last.pendingSteps.length > 0 && (
           <ApprovalModal steps={last.pendingSteps} onApprove={onApprove} onCancel={() => setLast(null)} />
+        )}
+        {messages.length === 1 && (
+          <div className="px-5 pb-4 pt-2 flex justify-center">
+            <button onClick={() => handlePrompt(introChips()[0])} disabled={busy}
+              className="px-5 py-2 rounded-full border-2 border-dashed border-accent/50 text-accent font-medium text-sm shadow-soft hover:bg-accent hover:text-white hover:border-accent hover:border-solid hover:-translate-y-0.5 transition cursor-pointer disabled:opacity-50">
+              {introChips()[0]}
+            </button>
+          </div>
         )}
         <form onSubmit={onSend} className="flex gap-2 p-3 border-t border-line bg-surface/60">
           <input className="field" value={input} onChange={(e) => setInput(e.target.value)} placeholder={isEmployee ? "Diagnose an account..." : "Ask your agent..."} />

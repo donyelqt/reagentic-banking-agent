@@ -161,9 +161,8 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 - Whether the seed history lives in ledger-service migration or account-service (ledger is the source for chart data)
 - Demo-day LLM provider: Gemini key set, or deterministic fallback presented knowingly
 
-## 15. Team Contributions
+## 15. Team Context
 
-- **Khrystel Aguila** — team pitch that originated the insight arc (spending visualization, concierge chat); frontend work including `FloatingChat` (in main via PR #2)
-- **John Aaron Garcia (garciajam)** — Gemini integration, transaction classification, chat context management (PR #1, merged)
-- **To-do workstreams (peer doc, Aug 16)** — charts, CSV, CI/CD, and test-suite items tracked for the team sprint
-- **Doniele** — authored the platform end-to-end: initial 7-service monorepo and architecture, all infrastructure (Docker Compose, Postgres/Kafka setup, health checks), the reconciliation engine (evidence trail + proposed corrective journal), the dual-role security model, and the agent core (planner/executor/approval gate); plus the PR #3 hardening pass (approval enforcement, classify validation, 1:1 contract)
+Team project (Accenture Cloud Elite cohort). The insight arc was adopted from the team's
+Aug 16 pitch; the Gemini classification/context work and frontend chat components were
+contributed by teammates and are in main. Attribution lives in git history, not here.

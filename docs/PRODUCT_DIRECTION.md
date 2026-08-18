@@ -1,7 +1,7 @@
 # Reagentic Banking Agent — Product Direction
 
 > **Status:** Living document — single source of truth for product scope and direction.
-> **Owner:** Doniel (internship deliverable, Accenture Cloud Elite) with team contributions.
+> **Owner:** Doniele (internship deliverable, Accenture Cloud Elite) with team contributions.
 > **Supersedes:** the product framing in `docs/ideas/` and any competing pitch framing; see §7 for the decision log.
 
 ---
@@ -166,4 +166,4 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 - **Khrystel Aguila** — team pitch that originated the insight arc (spending visualization, concierge chat); frontend work including `FloatingChat` (in main via PR #2)
 - **John Aaron Garcia (garciajam)** — Gemini integration, transaction classification, chat context management (PR #1, merged)
 - **To-do workstreams (peer doc, Aug 16)** — charts, CSV, CI/CD, and test-suite items tracked for the team sprint
-- **Doniel** — platform architecture, reconciliation, dual-role model, and the PR #3 hardening pass (approval enforcement, classify validation, 1:1 contract)
+- **Doniele** — platform architecture, reconciliation, dual-role model, and the PR #3 hardening pass (approval enforcement, classify validation, 1:1 contract)

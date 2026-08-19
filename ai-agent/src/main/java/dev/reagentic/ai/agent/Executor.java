@@ -63,6 +63,13 @@ public class Executor {
         return null;
     }
 
+    public Map<String, Object> reconcileDirect(String accountId, String token, String role) {
+        if (!"EMPLOYEE".equals(role)) {
+            throw new RuntimeException("reconcileAccount requires the EMPLOYEE (ops analyst) role");
+        }
+        return workers.reconcile(token, accountId);
+    }
+
     private StepResult executeStep(Step step, String token, String role) {
         boolean employee = "EMPLOYEE".equals(role);
         try {

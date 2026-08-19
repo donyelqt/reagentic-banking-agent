@@ -177,4 +177,23 @@ class ExecutorTest {
         assertNull(r.data());
         assertTrue(r.error().contains("ledger unreachable"));
     }
+
+    @Test
+    void reconcileDirectDelegatesForEmployee() {
+        Map<String, Object> expected = Map.of("balanced", true);
+        org.mockito.Mockito.when(workers.reconcile(eq("tok"), eq("acc-checking-0001"))).thenReturn(expected);
+
+        Map<String, Object> result = executor.reconcileDirect("acc-checking-0001", "tok", "EMPLOYEE");
+
+        assertEquals(expected, result);
+        verify(workers).reconcile(eq("tok"), eq("acc-checking-0001"));
+    }
+
+    @Test
+    void reconcileDirectDeniesUserBeforeWorkers() {
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+                () -> executor.reconcileDirect("acc-checking-0001", "tok", "USER"));
+
+        verify(workers, never()).reconcile(eq("tok"), eq("acc-checking-0001"));
+    }
 }

@@ -6,6 +6,7 @@ import dev.reagentic.ai.agent.ChatRequest;
 import dev.reagentic.ai.agent.ClassifyRequest;
 import dev.reagentic.ai.agent.ClassifyResponse;
 import dev.reagentic.ai.agent.TransactionClassificationService;
+import dev.reagentic.common.dto.ApiResponse;
 import dev.reagentic.common.security.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,6 +46,27 @@ public class AgentController {
                     .body(Map.of("status", 400, "code", "INVALID_CLASSIFY_REQUEST", "message", error));
         }
         return ResponseEntity.ok(classificationService.classify(req.transactions()));
+    }
+
+    @GetMapping("/reconcile/{accountId}")
+    public ResponseEntity<?> reconcile(@RequestHeader("Authorization") String authHeader,
+                                       Authentication auth,
+                                       @PathVariable String accountId) {
+        String token = JwtUtil.bearer(authHeader);
+        if (token == null || token.isBlank()) {
+            throw new MissingTokenException();
+        }
+        if (!"EMPLOYEE".equals(roleOf(auth))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("status", 403, "code", "FORBIDDEN", "message", "EMPLOYEE role required"));
+        }
+        try {
+            Map<String, Object> result = agentService.reconcile(accountId, token, "EMPLOYEE");
+            return ResponseEntity.ok(new ApiResponse<>(true, result, null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("status", 404, "code", "RECONCILE_FAILED", "message", e.getMessage()));
+        }
     }
 
     private String roleOf(Authentication auth) {

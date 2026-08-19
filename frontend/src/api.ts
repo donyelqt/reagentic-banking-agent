@@ -1,4 +1,4 @@
-import type { AccountView, AgentResponse, CategorySpend, ChatRequest, LedgerEntry } from "./types";
+import type { AccountView, AgentResponse, CategorySpend, ChatRequest, LedgerEntry, ReconcileResult } from "./types";
 
 const API = import.meta.env.VITE_GATEWAY_URL || "";
 
@@ -39,6 +39,12 @@ export const transfer = (body: {
 
 export const getLedger = (accountId: string) =>
   req<{ success: boolean; data: any[] }>("/api/ledger/" + accountId);
+
+export const getInternalLedger = (accountId: string) =>
+  req<{ success: boolean; data: LedgerEntry[] }>("/api/ledger/internal/" + accountId);
+
+export const reconcileAccount = (accountId: string) =>
+  req<{ success: boolean; data: ReconcileResult }>("/api/agent/reconcile/" + accountId);
 
 async function downloadFile(path: string, filename: string): Promise<void> {
   const token = localStorage.getItem("jwt");

@@ -52,3 +52,27 @@ export interface ChatRequest {
   approval?: string[]
   jwt?: string
 }
+
+export interface ReconcileEvidence {
+  entryId: string
+  type: string
+  signedAmount: string
+  balanceAfter: string
+  paymentId: string
+}
+
+export interface ReconcileResult {
+  accountId: string
+  balance: string
+  ledgerSum: string
+  balanced: boolean
+  delta?: string
+  direction?: string
+  missingAmount?: string
+  lastEntryId?: string
+  lastPaymentId?: string
+  lastBalanceAfter?: string
+  diagnosis?: string
+  evidenceCount?: number
+  evidence?: ReconcileEvidence[]
+}

@@ -38,6 +38,15 @@ function AgentIcon() {
   );
 }
 
+function LedgerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
+      <path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V3z" strokeLinejoin="round" />
+      <path d="M8 8h8M8 12h8M8 16h5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function CloseIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
@@ -57,7 +66,11 @@ function MenuIcon() {
 type NavItem = { to: string; label: string; icon: ReactNode };
 
 function itemsFor(isEmployee: boolean): NavItem[] {
-  if (isEmployee) return [{ to: "/agent", label: "Ops Console", icon: <AgentIcon /> }];
+  if (isEmployee)
+    return [
+      { to: "/agent", label: "Ops Console", icon: <AgentIcon /> },
+      { to: "/ops", label: "Ledger Console", icon: <LedgerIcon /> },
+    ];
   return [
     { to: "/dashboard", label: "Dashboard", icon: <DashboardIcon /> },
     { to: "/activity", label: "Activity", icon: <ActivityIcon /> },

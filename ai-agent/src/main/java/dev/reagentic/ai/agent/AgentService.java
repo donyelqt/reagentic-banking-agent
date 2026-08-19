@@ -31,6 +31,10 @@ public class AgentService {
         return new AgentResponse(plan.steps(), exec.results(), exec.pending(), reply);
     }
 
+    public Map<String, Object> reconcile(String accountId, String token, String role) {
+        return executor.reconcileDirect(accountId, token, role);
+    }
+
     private String buildReply(Plan plan, Executor.ExecResult exec, String message) {
         if (plan.steps().isEmpty()) {
             return "I can help with: list accounts, balances, transactions, transfers (with your approval), "

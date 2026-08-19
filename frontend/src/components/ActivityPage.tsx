@@ -57,46 +57,49 @@ export default function ActivityPage({ accounts }: { accounts: AccountView[] }) 
 
   return (
     <div>
-      <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
-        <div>
-          <p className="label">Full history, straight from the ledger</p>
-          <h1 className="text-4xl mt-1">Activity</h1>
+      <div className="sticky top-14 md:top-0 z-20 -mx-4 md:-mx-8 px-4 md:px-8 pt-4 md:pt-6 pb-4 bg-bg border-b border-line">
+        <div className="flex items-end justify-between flex-wrap gap-4">
+          <div>
+            <p className="label">Full history, straight from the ledger</p>
+            <h1 className="text-4xl mt-1">Activity</h1>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {accounts.length > 1 && (
+              <label className="flex items-center gap-3">
+                <span className="label">Account</span>
+                <select className="field !w-auto" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                  {accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.type} ({a.accountId})</option>)}
+                </select>
+              </label>
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => run(() => downloadStatementCsv(accountId), 'CSV')}
+                className="text-xs font-medium text-[#8A6D1A] bg-gold/15 hover:bg-gold/25 px-3 py-1.5 rounded-full transition-colors"
+                title="Download statement as plain CSV"
+              >
+                CSV
+              </button>
+              <button
+                onClick={() => run(() => downloadStatementExcel(accountId), 'Excel')}
+                className="text-xs font-medium text-accent bg-accent/10 hover:bg-accent/20 px-3 py-1.5 rounded-full transition-colors"
+                title="Download the same statement as a styled Excel workbook"
+              >
+                Excel
+              </button>
+            </div>
+          </div>
         </div>
-        {accounts.length > 1 && (
-          <label className="flex items-center gap-3">
-            <span className="label">Account</span>
-            <select className="field !w-auto" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-              {accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.type} ({a.accountId})</option>)}
-            </select>
-          </label>
-        )}
-      </div>
-
-      <div className="flex items-center justify-end gap-2 mb-4">
-        <button
-          onClick={() => run(() => downloadStatementCsv(accountId), 'CSV')}
-          className="text-xs font-medium text-[#8A6D1A] bg-gold/15 hover:bg-gold/25 px-3 py-1.5 rounded-full transition-colors"
-          title="Download statement as plain CSV"
-        >
-          CSV
-        </button>
-        <button
-          onClick={() => run(() => downloadStatementExcel(accountId), 'Excel')}
-          className="text-xs font-medium text-accent bg-accent/10 hover:bg-accent/20 px-3 py-1.5 rounded-full transition-colors"
-          title="Download the same statement as a styled Excel workbook"
-        >
-          Excel
-        </button>
       </div>
 
       {dlError && (
-        <div className="tag-neg rounded-xl px-4 py-2.5 flex items-center justify-between text-sm mb-4">
+        <div className="tag-neg rounded-xl px-4 py-2.5 flex items-center justify-between text-sm my-4">
           <span>{dlError}</span>
           <button className="font-medium underline" onClick={() => setDlError(null)}>Dismiss</button>
         </div>
       )}
 
-      <div className="card p-6">
+      <div className="card p-6 mt-4">
         {error ? (
           <div className="grid place-items-center min-h-[280px] text-center">
             <div>

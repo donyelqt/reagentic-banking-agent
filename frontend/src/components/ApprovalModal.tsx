@@ -6,15 +6,15 @@ export default function ApprovalModal({ steps, onApprove, onCancel }: { steps: S
   const formatStepDetails = (args: any) => {
     try {
       const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args;
-      
+
       if (parsedArgs && parsedArgs.amount) {
-        return `Amount: ₱${parsedArgs.amount}`;
+        const dest = parsedArgs.to ? ` → ${parsedArgs.to}` : '';
+        return `Amount: $${parsedArgs.amount}${dest}`;
       }
-      
-      // Fallback if it's an action without an amount
-      return "Action details attached"; 
-    } catch (error) {
-      return "Action details attached";
+
+      return 'Action details attached';
+    } catch {
+      return 'Action details attached';
     }
   };
 

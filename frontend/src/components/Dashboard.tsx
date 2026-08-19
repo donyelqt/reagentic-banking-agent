@@ -38,10 +38,9 @@ export default function Dashboard({ accounts, onTransfer }: { accounts: AccountV
         {accounts.map((a, i) => <AccountCard key={a.accountId} account={a} index={i} />)}
       </div>
 
-      {/* NEW RECHARTS DASHBOARD WIDGETS */}
       <div className="grid lg:grid-cols-2 gap-6 mt-6">
-        <CategoryChart />
-        <SpendingTrendChart />
+        <CategoryChart accounts={accounts} />
+        <SpendingTrendChart data={allActivity} />
       </div>
 
       {/* Existing Cash Flow & Activity */}

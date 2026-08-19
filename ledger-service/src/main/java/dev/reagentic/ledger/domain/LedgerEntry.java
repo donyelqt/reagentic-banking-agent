@@ -21,6 +21,9 @@ public class LedgerEntry {
     @Column(nullable = false)
     private String type;
 
+    @Column(name = "description")
+    private String description;
+
     @Column(name = "signed_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal signedAmount;
 
@@ -55,6 +58,10 @@ public class LedgerEntry {
 
     public String getType() {
         return type;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public BigDecimal getSignedAmount() {

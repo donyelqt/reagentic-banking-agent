@@ -55,7 +55,7 @@ The product spine is **Direction B** (agentic operations). The insight arc (spen
 ## 5. Strategic Context
 
 - **Business goal:** Deliver an unmistakably enterprise-grade banking demo for the Accenture Cloud Elite internship — one that graders recognize as real engineering, not a tutorial.
-- **Why now:** The platform (6 services, saga/outbox, Kafka ledger, JWT, dual-role agent) is built, tested (92/92), and demo-ready. The remaining work is the insight arc that makes the demo's opening act visual.
+- **Why now:** The platform (6 services, saga/outbox, Kafka ledger, JWT, dual-role agent) is built, tested (93/93), and demo-ready. The remaining work is the insight arc that makes the demo's opening act visual.
 - **Competitive landscape (peers):** Most cohort demos are a single Spring Boot service plus a chatbot, or read-only analytics dashboards. Both are beaten by a system where the AI *acts* with proof and guardrails.
 - **Decision this doc records:** Direction B is the product. See §7 for the full decision log.
 
@@ -106,7 +106,7 @@ Adopted from the team pitch, fed by the bank's own data — no CSV:
 | Metric | Target |
 |---|---|
 | Demo-time: hero flows execute live without failure | reconcile (clean + injected break), supervised transfer, 403 role denials, self-explaining chat onboarding ("What can you do?" → chips → approve) |
-| Test suite | 92/92 passing (`mvnw test`), no regressions on PR merge |
+| Test suite | 93/93 passing (`mvnw test`), no regressions on PR merge |
 | Guardrail verification | transfer without approval is impossible (server-enforced); LLM drift falls back, never mislabels |
 | Insight arc demo beat | charts + analyze action live from ledger data within the next increment |
 | CSV export | CSV (RFC 4180) and styled XLSX, both verifiable against the ledger (row count == Σ entries; balance column == `balance_after`); USER + EMPLOYEE routes |
@@ -132,7 +132,7 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 - [x] Dashboard shows spending by category from the ledger
 - [x] "Analyze my spending" returns a categorized summary with totals
 - [x] Insight can lead directly into a proposed (approved) action
-  - Status: backend `/api/agent/classify` complete and tested (categorized summary, per-item fallback, edge cases). Frontend renders balance + cash-flow charts from ledger data; the category breakdown (CategoryChart is still a mislabeled balance pie) and the "Analyze my spending" chat action need wiring to `/api/agent/classify`. The seed history (V3) is the prerequisite for believable charts — the current axis ("Jan 1, Aug 16-18") exposes the seven-month seed gap. Backend criteria are met; UI wiring + seed history are the remaining work.
+  - Status: complete. Backend `/api/agent/classify` (categorized summary, per-item fallback, edge cases) + V3 demo-history seed (12-month net-zero chain, Jul 2025–Jul 2026, descriptions) + frontend wiring: `classifySpending` batch helper (≤100/request, spending-only, merged summary), CategoryChart now a real spending-by-category pie (skeleton/empty/error+retry states), "Analyze my spending" chat action in both AgentChat and FloatingChat (deterministic, no LLM key needed). Verified end-to-end on a fresh-volume stack: 301 entries, reconcile BALANCED (1000.00 = 1000.00), 9 live categories (UTILITIES largest).
 
 **Edge cases covered:** garbage classify input → 400 with precise message; >100 items → 400; null elements → 400; LLM reorders classifications → per-item fallback; model unreachable → deterministic fallback; unknown tool in plan → whole plan falls back.
 
@@ -157,7 +157,7 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 
 ## 13. Roadmap
 
-- **Done:** platform, dual-role agent, guardrails, classification, 92/92 tests, PR #3 hardening, landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16), statement export — RFC 4180 CSV + styled XLSX (POI), USER + EMPLOYEE routes, humanized descriptions
+- **Done:** platform, dual-role agent, guardrails, classification, 93/93 tests, PR #3 hardening, landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16), statement export — RFC 4180 CSV + styled XLSX (POI), USER + EMPLOYEE routes, humanized descriptions, floating chat redesign, Story 3 insight arc (spending-by-category chart + "Analyze my spending" action + 12-month seeded history)
 - **Next (committed):** insight arc — V3 seed history → category charts + analyze action
 - **Later (vision only, pitch-ready):** fraud detection, anomaly scoring, more agent tools, CI/CD test gate on merge (ADR 0006) + branch protection
 

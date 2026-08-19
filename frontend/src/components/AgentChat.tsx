@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { agentChat } from "../api";
+import { agentChat, classifySpending, getLedger } from "../api";
 import type { AgentResponse } from "../types";
 import ApprovalModal from "./ApprovalModal";
-import { isCapabilityQuestion, capabilityReply, introChips, actionChips, followUpChips } from "../lib/chatPrompts";
+import { isCapabilityQuestion, capabilityReply, isAnalyzeQuestion, analyzeReply, introChips, actionChips, followUpChips } from "../lib/chatPrompts";
 
 interface Msg { role: "user" | "agent"; text: string; chips?: string[] }
 
@@ -57,9 +57,26 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
       setMessages((m) => [...m, { role: "agent", text: capabilityReply(isEmployee), chips: actionChips(isEmployee) }]);
       return;
     }
+    if (isAnalyzeQuestion(t) && !isEmployee) {
+      handleAnalyze();
+      return;
+    }
     const message = buildMessage(t);
     const history = messages.slice(-6).map((m) => `${m.role === "user" ? "User" : "Agent"}: ${m.text}`);
     send(message, { message, history }, followUpChips(isEmployee, t));
+  }
+
+  async function handleAnalyze() {
+    setBusy(true);
+    try {
+      const lists = await Promise.all(ACCOUNTS.map((a) => getLedger(a.id).then((r: any) => r.data ?? []).catch(() => [])));
+      const summary = await classifySpending(lists.flat());
+      setMessages((m) => [...m, { role: "agent", text: analyzeReply(summary), chips: followUpChips(false, "Analyze my spending") }]);
+    } catch {
+      setMessages((m) => [...m, { role: "agent", text: "I couldn't analyze your spending right now. Try again in a moment." }]);
+    } finally {
+      setBusy(false);
+    }
   }
 
   function onSend(e: React.FormEvent) {

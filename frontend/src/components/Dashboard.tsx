@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getLedger, downloadStatementCsv, downloadStatementExcel } from '../api'
-import type { AccountView, LedgerEntry } from '../types'
+import { getLedger, downloadStatementCsv, downloadStatementExcel, classifySpending } from '../api'
+import type { AccountView, CategorySpend, LedgerEntry } from '../types'
 import { useCountUp } from '../lib/useCountUp'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { CategoryChart } from './CategoryChart';
@@ -9,6 +9,8 @@ import { SpendingTrendChart } from './SpendingTrendChart';
 export default function Dashboard({ accounts, onTransfer }: { accounts: AccountView[]; onTransfer: () => void }) {
   const [allActivity, setAllActivity] = useState<LedgerEntry[]>([])
   const [activity, setActivity] = useState<LedgerEntry[]>([])
+  const [categorySummary, setCategorySummary] = useState<CategorySpend[] | null>(null)
+  const [classifyError, setClassifyError] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -19,6 +21,11 @@ export default function Dashboard({ accounts, onTransfer }: { accounts: AccountV
         const all = lists.flat().sort((a: LedgerEntry, b: LedgerEntry) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
         setAllActivity(all)
         setActivity(all.slice(0, 6))
+        return all
+      })
+      .then((all) => {
+        if (cancelled || !all) return
+        classifySpending(all).then(setCategorySummary).catch(() => { if (!cancelled) setClassifyError(true) })
       })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
@@ -39,7 +46,15 @@ export default function Dashboard({ accounts, onTransfer }: { accounts: AccountV
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6 mt-6">
-        <CategoryChart accounts={accounts} />
+        <CategoryChart
+          summary={categorySummary}
+          error={classifyError}
+          onRetry={() => {
+            setCategorySummary(null)
+            setClassifyError(false)
+            classifySpending(allActivity).then(setCategorySummary).catch(() => setClassifyError(true))
+          }}
+        />
         <SpendingTrendChart data={allActivity} />
       </div>
 

@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { agentChat } from '../api'
-import type { AgentResponse } from '../types'
+import { agentChat, classifySpending, getLedger } from '../api'
+import type { AccountView, AgentResponse } from '../types'
 import ApprovalModal from './ApprovalModal'
-import { isCapabilityQuestion, capabilityReply, introChips, actionChips, followUpChips } from '../lib/chatPrompts'
+import { isCapabilityQuestion, capabilityReply, isAnalyzeQuestion, analyzeReply, introChips, actionChips, followUpChips } from '../lib/chatPrompts'
 
 const GREETING = "Hello! I'm your banking agent. I can check balances, show your transactions, and move money between your accounts - transfers always wait for your approval."
 
 interface Msg { role: 'user' | 'agent'; text: string; chips?: string[] }
 
-export default function FloatingChat({ onExpand }: { onExpand: () => void }) {
+export default function FloatingChat({ accounts, onExpand }: { accounts: AccountView[]; onExpand: () => void }) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Msg[]>([
     { role: 'agent', text: GREETING }
@@ -45,7 +45,24 @@ export default function FloatingChat({ onExpand }: { onExpand: () => void }) {
       setMessages((m) => [...m, { role: 'agent', text: capabilityReply(false), chips: actionChips(false) }])
       return
     }
+    if (isAnalyzeQuestion(t)) {
+      handleAnalyze()
+      return
+    }
     send(t, { message: t }, followUpChips(false, t))
+  }
+
+  async function handleAnalyze() {
+    setBusy(true)
+    try {
+      const lists = await Promise.all(accounts.map((a) => getLedger(a.accountId).then((r: any) => r.data ?? []).catch(() => [])))
+      const summary = await classifySpending(lists.flat())
+      setMessages((m) => [...m, { role: 'agent', text: analyzeReply(summary), chips: followUpChips(false, 'Analyze my spending') }])
+    } catch {
+      setMessages((m) => [...m, { role: 'agent', text: "I couldn't analyze your spending right now. Try again in a moment." }])
+    } finally {
+      setBusy(false)
+    }
   }
 
   function onSend(e: React.FormEvent) {

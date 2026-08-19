@@ -171,7 +171,7 @@ function AppShell({
         </main>
       </div>
 
-      {!onAgent && <FloatingChat onExpand={() => navigate("/agent")} />}
+      {!onAgent && <FloatingChat accounts={accounts} onExpand={() => navigate("/agent")} />}
     </div>
   );
 }

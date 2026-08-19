@@ -1,4 +1,4 @@
-import type { AccountView, AgentResponse, ChatRequest } from "./types";
+import type { AccountView, AgentResponse, CategorySpend, ChatRequest, LedgerEntry } from "./types";
 
 const API = import.meta.env.VITE_GATEWAY_URL || "";
 
@@ -63,6 +63,41 @@ export const downloadStatementExcel = (accountId: string) =>
 
 export const agentChat = (body: ChatRequest) =>
   req<AgentResponse>("/api/agent/chat", { method: "POST", body: JSON.stringify(body) });
+
+const CLASSIFY_BATCH = 100;
+
+/**
+ * Classifies ledger entries into a spending-by-category summary.
+ * Only money out with a merchant description is spending: live transfers
+ * (no description) and credits (income) are excluded. The classify endpoint
+ * caps at 100 items per request, so the ledger is chunked and the category
+ * summaries are merged client-side.
+ */
+export async function classifySpending(entries: LedgerEntry[]): Promise<CategorySpend[]> {
+  const items = entries
+    .filter((e) => e.description && parseFloat(e.signedAmount) < 0)
+    .map((e) => ({ description: e.description as string, amount: e.signedAmount }));
+  if (items.length === 0) return [];
+
+  const merged = new Map<string, { total: number; count: number }>();
+  for (let i = 0; i < items.length; i += CLASSIFY_BATCH) {
+    const json: any = await req("/api/agent/classify", {
+      method: "POST",
+      body: JSON.stringify({ transactions: items.slice(i, i + CLASSIFY_BATCH) })
+    });
+    const data = json?.data ?? json;
+    for (const t of data?.summary ?? []) {
+      const cur = merged.get(t.category) ?? { total: 0, count: 0 };
+      cur.total += Math.abs(parseFloat(t.total) || 0);
+      cur.count += t.count ?? 0;
+      merged.set(t.category, cur);
+    }
+  }
+
+  return [...merged.entries()]
+    .map(([category, v]) => ({ category, total: v.total, count: v.count }))
+    .sort((a, b) => b.total - a.total);
+}
 
 export function sessionFromToken(token: string | null): { email: string; role: string } | null {
   if (!token) return null;

@@ -9,9 +9,16 @@ export interface LedgerEntry {
   accountId: string
   paymentId: string | null
   type: string
+  description: string | null
   signedAmount: string
   balanceAfter: string
   createdAt: number
+}
+
+export interface CategorySpend {
+  category: string
+  total: number
+  count: number
 }
 
 export interface Step {

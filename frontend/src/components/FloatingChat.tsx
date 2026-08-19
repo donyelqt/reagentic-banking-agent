@@ -109,9 +109,9 @@ export default function FloatingChat({ onExpand }: { onExpand: () => void }) {
             )}
           </div>
           
-          {last && last.pendingSteps.length > 0 && (
-             <ApprovalModal steps={last.pendingSteps} onApprove={onApprove} onCancel={() => setLast(null)} />
-          )}
+           {last && last.pendingSteps.length > 0 && (
+              <ApprovalModal steps={last.pendingSteps} onApprove={onApprove} onCancel={() => setLast(null)} busy={busy} />
+           )}
 
           {messages.length === 1 && (
             <div className="px-4 pb-3 pt-1 flex justify-center">

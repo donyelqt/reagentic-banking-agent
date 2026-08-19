@@ -166,4 +166,5 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 - ~~Charts library choice~~ — **Resolved:** recharts, already in production use for the cash-flow chart. Remaining: the chart data contract with `/classify` (response shape for category breakdown)
 - ~~CSV export placement and scope~~ — **Resolved:** ledger-service serves `GET /api/ledger/{accountId}/statement.csv` (ownership-scoped via account-service, 404 for cross-account) and `GET /api/ledger/internal/{accountId}/statement.csv` (EMPLOYEE-only, any account), mirroring the existing list endpoints; RFC 4180-clean (UTF-8 BOM, CRLF, ISO-8601 UTC dates, signed amounts, running balance)
 - Whether the seed history lives in ledger-service migration or account-service (ledger is the source for chart data)
+- Where the CSV export endpoint lives (ledger-service owns the projection; account-service owns entitlements) and whether it's scoped to USER or also EMPLOYEE
 - Demo-day LLM provider: Gemini key set, or deterministic fallback presented knowingly

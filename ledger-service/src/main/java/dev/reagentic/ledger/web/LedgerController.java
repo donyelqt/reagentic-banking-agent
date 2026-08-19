@@ -32,7 +32,7 @@ public class LedgerController {
     }
 
     public record LedgerView(Long entryId, String accountId, String paymentId, String type,
-                             String signedAmount, String balanceAfter, long createdAt) {
+                             String description, String signedAmount, String balanceAfter, long createdAt) {
     }
 
     @GetMapping("/{accountId}")
@@ -126,7 +126,7 @@ public class LedgerController {
             entries = entries.stream().filter(e -> e.getCreatedAt() <= to).toList();
         }
         return entries.stream().map(e -> new LedgerView(
-                e.getEntryId(), e.getAccountId(), e.getPaymentId(), e.getType(),
+                e.getEntryId(), e.getAccountId(), e.getPaymentId(), e.getType(), e.getDescription(),
                 e.getSignedAmount().toPlainString(), e.getBalanceAfter().toPlainString(), e.getCreatedAt()))
                 .toList();
     }

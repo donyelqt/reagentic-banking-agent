@@ -29,13 +29,14 @@ public class KeywordTransactionClassifier implements TransactionClassifier {
         KEYWORDS.put(SpendingCategory.TRANSPORT, List.of(
                 "uber", "grab", "taxi", "gas", "fuel", "petron", "shell", "parking", "toll", "mrt", "lrt"));
         KEYWORDS.put(SpendingCategory.UTILITIES, List.of(
-                "electric", "meralco", "water", "maynilad", "internet", "pldt", "globe", "utility", "utilities"));
+                "electric", "meralco", "water", "maynilad", "internet", "pldt", "globe", "utility", "utilities",
+                "rent"));
         KEYWORDS.put(SpendingCategory.SHOPPING, List.of(
                 "shopee", "lazada", "amazon", "mall", "shopping", "store"));
         KEYWORDS.put(SpendingCategory.ENTERTAINMENT, List.of(
                 "cinema", "movie", "concert", "game", "steam", "playstation"));
         KEYWORDS.put(SpendingCategory.HEALTH, List.of(
-                "pharmacy", "clinic", "hospital", "doctor", "mercury drug", "watsons"));
+                "pharmacy", "clinic", "hospital", "doctor", "mercury drug", "watsons", "gym", "fitness"));
         KEYWORDS.put(SpendingCategory.TRAVEL, List.of(
                 "airline", "hotel", "booking.com", "airbnb", "flight", "travel"));
         KEYWORDS.put(SpendingCategory.INCOME, List.of(

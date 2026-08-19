@@ -40,6 +40,12 @@ class KeywordTransactionClassifierTest {
     @Test
     void utilityKeywordsClassifyAsUtilities() {
         assertEquals(SpendingCategory.UTILITIES, categoryOf("Meralco Bill Payment", "-60.00"));
+        assertEquals(SpendingCategory.UTILITIES, categoryOf("Crestview Apartments Rent", "-1200.00"));
+    }
+
+    @Test
+    void healthKeywordsClassifyAsHealth() {
+        assertEquals(SpendingCategory.HEALTH, categoryOf("Gym & Fitness", "-55.00"));
     }
 
     @Test

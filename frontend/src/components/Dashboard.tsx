@@ -122,16 +122,16 @@ function AccountCard({ account, index }: { account: AccountView; index: number }
           <button
             onClick={() => downloadStatementCsv(account.accountId).catch(() => {})}
             className="text-xs font-medium text-gold bg-gold/15 hover:bg-gold/25 px-3 py-1.5 rounded-full transition-colors"
-            title="Download statement (CSV)"
+            title="Download statement as plain CSV"
           >
-            CSV
+            Plain CSV
           </button>
           <button
             onClick={() => downloadStatementExcel(account.accountId).catch(() => {})}
             className="text-xs font-medium text-[#2D43F5] bg-[#2D43F5]/10 hover:bg-[#2D43F5]/20 px-3 py-1.5 rounded-full transition-colors"
-            title="Download styled statement (Excel)"
+            title="Download the same statement as a styled Excel workbook"
           >
-            Excel
+            Designed CSV
           </button>
         </div>
       </div>

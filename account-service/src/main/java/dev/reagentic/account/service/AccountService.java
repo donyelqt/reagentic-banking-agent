@@ -26,6 +26,10 @@ public class AccountService {
         return accountRepository.findByUserId(email);
     }
 
+    public List<Account> listAll() {
+        return accountRepository.findAll();
+    }
+
     public Account getForUser(String email, String accountId) {
         return accountRepository.findByAccountIdAndUserId(accountId, email)
                 .orElseThrow(() -> new AccountException("ACCOUNT_NOT_FOUND", "Account not found or not owned by caller"));

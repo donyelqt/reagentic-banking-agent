@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getInternalLedger, reconcileAccount } from '../api'
+import { getInternalAccounts, getInternalLedger, reconcileAccount } from '../api'
 import type { AccountView, LedgerEntry, ReconcileResult } from '../types'
 
 const PAGE = 50
@@ -22,8 +22,10 @@ function typeChipClass(type: string): string {
     : 'text-neg bg-[rgba(229,72,77,.12)]'
 }
 
-export default function LedgerConsole({ accounts }: { accounts: AccountView[] }) {
-  const [accountId, setAccountId] = useState(accounts[0]?.accountId ?? '')
+export default function LedgerConsole() {
+  const [accounts, setAccounts] = useState<AccountView[]>([])
+  const [accountsReady, setAccountsReady] = useState(false)
+  const [accountId, setAccountId] = useState('')
   const [entries, setEntries] = useState<LedgerEntry[]>([])
   const [visible, setVisible] = useState(PAGE)
   const [loading, setLoading] = useState(true)
@@ -32,6 +34,20 @@ export default function LedgerConsole({ accounts }: { accounts: AccountView[] })
   const [recon, setRecon] = useState<ReconcileResult | null>(null)
   const [reconciling, setReconciling] = useState(false)
   const [reconError, setReconError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getInternalAccounts()
+      .then((r: any) => {
+        if (cancelled) return
+        const list: AccountView[] = r.data ?? []
+        setAccounts(list)
+        setAccountId((prev) => (list.some((a) => a.accountId === prev) ? prev : (list[0]?.accountId ?? '')))
+      })
+      .catch(() => { if (!cancelled) setAccounts([]) })
+      .finally(() => { if (!cancelled) setAccountsReady(true) })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     if (!accountId) return
@@ -90,11 +106,24 @@ export default function LedgerConsole({ accounts }: { accounts: AccountView[] })
         </label>
       </div>
 
+      {!accountsReady ? (
+        <div className="card p-6 mt-6 grid place-items-center min-h-[280px]">
+          <div className="w-full max-w-sm space-y-3">
+            <div className="h-3 rounded shimmer" />
+            <div className="h-3 rounded shimmer" />
+            <div className="h-10 rounded-2xl shimmer" />
+          </div>
+        </div>
+      ) : accounts.length === 0 ? (
+        <div className="card p-6 mt-6 grid place-items-center min-h-[280px]">
+          <p className="text-sm text-muted text-center max-w-[34ch]">No accounts to inspect.</p>
+        </div>
+      ) : (
       <div className="mt-6 grid lg:grid-cols-3 gap-4">
         <div className="card p-6 flex flex-col justify-between gap-5">
           <div>
             <p className="label">Available balance</p>
-            <p className="text-4xl font-display mt-2">{account ? money(parseFloat(account.balance)) : '—'}</p>
+            <p className="text-4xl font-display mt-2">{recon ? money(parseFloat(recon.balance)) : account ? money(parseFloat(account.balance)) : '—'}</p>
             <p className="text-xs text-muted mt-1 font-mono">{account?.accountId}</p>
           </div>
           <div className="flex items-center justify-between gap-3">
@@ -174,6 +203,7 @@ export default function LedgerConsole({ accounts }: { accounts: AccountView[] })
           )}
         </div>
       </div>
+      )}
 
       <div className="card p-6 mt-4">
         {error ? (

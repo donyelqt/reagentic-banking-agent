@@ -43,6 +43,9 @@ export const getLedger = (accountId: string) =>
 export const getInternalLedger = (accountId: string) =>
   req<{ success: boolean; data: LedgerEntry[] }>("/api/ledger/internal/" + accountId);
 
+export const getInternalAccounts = () =>
+  req<{ success: boolean; data: AccountView[] }>("/api/accounts/internal");
+
 export const reconcileAccount = (accountId: string) =>
   req<{ success: boolean; data: ReconcileResult }>("/api/agent/reconcile/" + accountId);
 

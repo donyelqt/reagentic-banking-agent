@@ -4,6 +4,7 @@ import dev.reagentic.common.dto.ApiResponse;
 import dev.reagentic.ledger.domain.LedgerEntry;
 import dev.reagentic.ledger.repository.LedgerRepository;
 import dev.reagentic.ledger.service.StatementCsvRenderer;
+import dev.reagentic.ledger.service.XlsxStatementExporter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -91,6 +92,30 @@ public class LedgerController {
                         "attachment; filename=\"statement-"
                                 + accountId.replaceAll("[^A-Za-z0-9._-]", "_") + ".csv\"")
                 .body(StatementCsvRenderer.render(entries));
+    }
+
+    @GetMapping("/{accountId}/statement.xlsx")
+    public ResponseEntity<byte[]> statementExcel(HttpServletRequest request, @PathVariable String accountId) {
+        verifyOwnership(request.getHeader("Authorization"), accountId);
+        return xlsxResponse(repository.findByAccountIdOrderByCreatedAtAsc(accountId), accountId);
+    }
+
+    @GetMapping("/internal/{accountId}/statement.xlsx")
+    public ResponseEntity<byte[]> statementInternalExcel(Authentication auth, @PathVariable String accountId) {
+        if (!isEmployee(auth)) {
+            throw new AccessDeniedException("EMPLOYEE role required");
+        }
+        return xlsxResponse(repository.findByAccountIdOrderByCreatedAtAsc(accountId), accountId);
+    }
+
+    private ResponseEntity<byte[]> xlsxResponse(List<LedgerEntry> entries, String accountId) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"statement-"
+                                + accountId.replaceAll("[^A-Za-z0-9._-]", "_") + ".xlsx\"")
+                .body(XlsxStatementExporter.render(accountId, entries));
     }
 
     private List<LedgerView> toViews(List<LedgerEntry> entries, Long from, Long to) {

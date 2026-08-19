@@ -40,9 +40,9 @@ export const transfer = (body: {
 export const getLedger = (accountId: string) =>
   req<{ success: boolean; data: any[] }>("/api/ledger/" + accountId);
 
-export async function downloadStatement(accountId: string): Promise<void> {
+async function downloadFile(path: string, filename: string): Promise<void> {
   const token = localStorage.getItem("jwt");
-  const res = await fetch(API + `/api/ledger/${accountId}/statement.csv`, {
+  const res = await fetch(API + path, {
     headers: token ? { Authorization: "Bearer " + token } : {}
   });
   if (!res.ok) throw new Error("Download failed: HTTP " + res.status);
@@ -50,10 +50,16 @@ export async function downloadStatement(accountId: string): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `statement-${accountId}.csv`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export const downloadStatementCsv = (accountId: string) =>
+  downloadFile(`/api/ledger/${accountId}/statement.csv`, `statement-${accountId}.csv`);
+
+export const downloadStatementExcel = (accountId: string) =>
+  downloadFile(`/api/ledger/${accountId}/statement.xlsx`, `statement-${accountId}.xlsx`);
 
 export const agentChat = (body: ChatRequest) =>
   req<AgentResponse>("/api/agent/chat", { method: "POST", body: JSON.stringify(body) });

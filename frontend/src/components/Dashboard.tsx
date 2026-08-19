@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getLedger, downloadStatement } from '../api'
+import { getLedger, downloadStatementCsv, downloadStatementExcel } from '../api'
 import type { AccountView, LedgerEntry } from '../types'
 import { useCountUp } from '../lib/useCountUp'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -118,13 +118,22 @@ function AccountCard({ account, index }: { account: AccountView; index: number }
       </div>
       <div className="mt-4 flex items-center justify-between">
         <span className="text-xs text-muted font-mono">{account.accountId}</span>
-        <button
-          onClick={() => downloadStatement(account.accountId).catch(() => {})}
-          className="text-xs font-medium text-gold bg-gold/15 hover:bg-gold/25 px-3 py-1.5 rounded-full transition-colors"
-          title="Download statement (CSV)"
-        >
-          Download CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => downloadStatementCsv(account.accountId).catch(() => {})}
+            className="text-xs font-medium text-gold bg-gold/15 hover:bg-gold/25 px-3 py-1.5 rounded-full transition-colors"
+            title="Download statement (CSV)"
+          >
+            CSV
+          </button>
+          <button
+            onClick={() => downloadStatementExcel(account.accountId).catch(() => {})}
+            className="text-xs font-medium text-[#2D43F5] bg-[#2D43F5]/10 hover:bg-[#2D43F5]/20 px-3 py-1.5 rounded-full transition-colors"
+            title="Download styled statement (Excel)"
+          >
+            Excel
+          </button>
+        </div>
       </div>
     </div>
   )

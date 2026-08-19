@@ -131,4 +131,69 @@ class LedgerControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(StatementCsvRenderer.render(entries), response.getBody());
     }
+
+    @Test
+    void statementExcelServesStyledWorkbookWithDownloadHeaders() {
+        stubOwnership(true);
+        List<LedgerEntry> entries = List.of(entry("pmt-1", "DEBIT", "-50.00", "950.00"));
+        when(repository.findByAccountIdOrderByCreatedAtAsc("acc-checking-0001")).thenReturn(entries);
+
+        ResponseEntity<byte[]> response = controller.statementExcel(request(), "acc-checking-0001");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+                response.getHeaders().getContentType());
+        assertTrue(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION)
+                .contains("statement-acc-checking-0001.xlsx"));
+        assertTrue(response.getBody().length > 0);
+        assertTrue(response.getBody()[0] == 'P' && response.getBody()[1] == 'K');
+    }
+
+    @Test
+    void statementExcelSanitizesAccountIdInFileName() {
+        stubOwnership(true);
+        when(repository.findByAccountIdOrderByCreatedAtAsc("acc x/y")).thenReturn(List.of());
+
+        ResponseEntity<byte[]> response = controller.statementExcel(request(), "acc x/y");
+
+        assertTrue(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION)
+                .contains("statement-acc_x_y.xlsx"));
+    }
+
+    @Test
+    void statementExcelForUnownedAccountThrowsNotOwnedAndMapsTo404() {
+        stubOwnership(false);
+        when(repository.findByAccountIdOrderByCreatedAtAsc("acc-other-0001")).thenReturn(List.of());
+
+        assertThrows(LedgerController.NotOwnedException.class,
+                () -> controller.statementExcel(request(), "acc-other-0001"));
+
+        ResponseEntity<Map<String, Object>> denied = controller.notOwned();
+        assertEquals(HttpStatus.NOT_FOUND, denied.getStatusCode());
+        assertEquals("ACCOUNT_NOT_FOUND", denied.getBody().get("code"));
+    }
+
+    @Test
+    void statementExcelInternalRejectsNonEmployee() {
+        assertThrows(AccessDeniedException.class,
+                () -> controller.statementInternalExcel(auth(), "acc-checking-0001"));
+
+        ResponseEntity<Map<String, Object>> denied = controller.denied();
+        assertEquals(HttpStatus.FORBIDDEN, denied.getStatusCode());
+        assertEquals("FORBIDDEN", denied.getBody().get("code"));
+    }
+
+    @Test
+    void statementExcelInternalAllowsEmployeeAndRendersAnyAccount() {
+        List<LedgerEntry> entries = List.of(entry("pmt-1", "DEBIT", "-50.00", "950.00"));
+        when(repository.findByAccountIdOrderByCreatedAtAsc("acc-checking-0001")).thenReturn(entries);
+
+        ResponseEntity<byte[]> response = controller.statementInternalExcel(
+                auth("ROLE_EMPLOYEE"), "acc-checking-0001");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().length > 0);
+        assertTrue(response.getBody()[0] == 'P' && response.getBody()[1] == 'K');
+    }
 }

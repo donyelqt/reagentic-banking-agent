@@ -55,7 +55,7 @@ The product spine is **Direction B** (agentic operations). The insight arc (spen
 ## 5. Strategic Context
 
 - **Business goal:** Deliver an unmistakably enterprise-grade banking demo for the Accenture Cloud Elite internship — one that graders recognize as real engineering, not a tutorial.
-- **Why now:** The platform (6 services, saga/outbox, Kafka ledger, JWT, dual-role agent) is built, tested (76/76), and demo-ready. The remaining work is the insight arc that makes the demo's opening act visual.
+- **Why now:** The platform (6 services, saga/outbox, Kafka ledger, JWT, dual-role agent) is built, tested (92/92), and demo-ready. The remaining work is the insight arc that makes the demo's opening act visual.
 - **Competitive landscape (peers):** Most cohort demos are a single Spring Boot service plus a chatbot, or read-only analytics dashboards. Both are beaten by a system where the AI *acts* with proof and guardrails.
 - **Decision this doc records:** Direction B is the product. See §7 for the full decision log.
 
@@ -86,7 +86,7 @@ A multi-service bank (gateway → auth/account/payment/ledger/notification) with
 | Product spine | **Direction B: agentic banking operations** | The platform is built, tested, and defensible; it is the harder and more impressive engineering |
 | Insight arc | **Adopted as a feature** | "Understand my money" is a strong demo opening act; it runs on the bank's own ledger data |
 | CSV upload as core mechanism | **Rejected** | We are the bank, not accounting software. The ledger is authoritative; an imported file creates a second truth the ledger must reconcile against — and the industry's documented CSV-import failure mode *is* duplicates and re-import drift (Continia reimport prevention, NetSuite/Cobase refresh duplicates, Sage "import ran twice, two copies of the same debit"). Two sources of truth is the disease this architecture exists to prevent. Rich history comes from a seed migration, not user uploads |
-| CSV statement export | **Adopted as a feature** | Read-only, RFC 4180-clean snapshot of the ledger (headers, UTF-8, CRLF, ISO dates, signed amounts, running balance) — the portability every real bank ships (Westpac, Huntington, PPF Banka, ECB T2S, Canada Open Finance). Zero drift risk: the ledger stays authoritative; the export is a projection. Bonus: real-bank CSVs are famously broken (StatementPro), so "export done right" is a demo talking point |
+| CSV statement export | **Adopted as a feature** | Read-only, RFC 4180-clean snapshot of the ledger (headers, UTF-8, CRLF, ISO dates, signed amounts, running balance) — the portability every real bank ships (Westpac, Huntington, PPF Banka, ECB T2S, Canada Open Finance). Zero drift risk: the ledger stays authoritative; the export is a projection. Bonus: real-bank CSVs are famously broken (StatementPro), so "export done right" is a demo talking point. A styled XLSX workbook (POI) is the human view of the same projection — branded navy title bar, gold header, banded rows, `$#,##0.00` amounts |
 | Agent onboarding (capability pre-prompt + clickable chips) | **Adopted** | "What can you do?" is the discoverability hook: a pinned prompt that opens the capability map, then role-aware action chips that make the demo self-explaining to judges without a help menu |
 | Live bank / Open Banking integration | **Out of scope** | BSP accreditation is not attainable in-sprint; the ledger is the more credible data source anyway |
 | Corrective journal execution | **Out of scope** | The agent proposes; humans execute. This is the trust story, not a limitation |
@@ -106,10 +106,10 @@ Adopted from the team pitch, fed by the bank's own data — no CSV:
 | Metric | Target |
 |---|---|
 | Demo-time: hero flows execute live without failure | reconcile (clean + injected break), supervised transfer, 403 role denials, self-explaining chat onboarding ("What can you do?" → chips → approve) |
-| Test suite | 76/76 passing (`mvnw test`), no regressions on PR merge |
+| Test suite | 92/92 passing (`mvnw test`), no regressions on PR merge |
 | Guardrail verification | transfer without approval is impossible (server-enforced); LLM drift falls back, never mislabels |
 | Insight arc demo beat | charts + analyze action live from ledger data within the next increment |
-| CSV export | one endpoint, RFC 4180-clean output verifiable against the ledger (row count == Σ entries; balance column == `balance_after`) |
+| CSV export | CSV (RFC 4180) and styled XLSX, both verifiable against the ledger (row count == Σ entries; balance column == `balance_after`); USER + EMPLOYEE routes |
 
 ## 10. User Stories & Requirements
 
@@ -151,13 +151,13 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 | Demo day LLM key absent | Deterministic fallback is the default; Gemini key is a one-line `.env` change (see `docs/demo-runbook.md`) |
 | Insight arc slips scope | It is the *only* committed next increment; everything else stays proposed |
 | Sparse seed history makes charts unbelievable (Jan-1-to-Aug gap on the axis) | `V3__seed_demo_history.sql` lands before chart wiring ships; the balance chain is self-consistent by construction |
-| CSV export scope creep (parsers, formats, pagination) | Export is a read-only projection: one endpoint, one RFC 4180-clean format, no import counterpart, no parsing |
+| CSV export scope creep (parsers, formats, pagination) | Export is a read-only projection: two formats (RFC 4180 CSV + styled XLSX) from the same ledger rows, no import counterpart, no parsing |
 | Stale jar in the demo image | Build the jar with `mvnw package` before `docker compose up --build` (documented in the demo runbook) |
 | Team story divergence (two pitch versions) | This doc is the canonical direction; the deck should be updated from it |
 
 ## 13. Roadmap
 
-- **Done:** platform, dual-role agent, guardrails, classification, 76/76 tests, PR #3 hardening, landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16), CSV statement export (RFC 4180-clean, ledger-owned projection, USER + EMPLOYEE routes)
+- **Done:** platform, dual-role agent, guardrails, classification, 92/92 tests, PR #3 hardening, landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16), statement export — RFC 4180 CSV + styled XLSX (POI), USER + EMPLOYEE routes, humanized descriptions
 - **Next (committed):** insight arc — V3 seed history → category charts + analyze action
 - **Later (vision only, pitch-ready):** fraud detection, anomaly scoring, more agent tools, CI/CD test gate on merge (ADR 0006) + branch protection
 

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { agentChat, classifySpending, getLedger } from "../api";
 import type { AgentResponse } from "../types";
 import ApprovalModal from "./ApprovalModal";
@@ -26,6 +27,18 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
   const [account, setAccount] = useState(ACCOUNTS[0].id);
   const [last, setLast] = useState<AgentResponse | null>(null);
   const [busy, setBusy] = useState(false);
+  const location = useLocation();
+  const autoShown = useRef(false);
+
+  useEffect(() => {
+    if (autoShown.current) return;
+    if ((location.state as { viewAll?: boolean } | null)?.viewAll) {
+      autoShown.current = true;
+      window.history.replaceState({}, "");
+      handlePrompt("Show my transactions");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]);
 
   function buildMessage(text: string): string {
     const t = text.trim().toLowerCase();

@@ -146,7 +146,7 @@ function AppShell({
                 isEmployee ? (
                   <Navigate to="/agent" replace />
                 ) : (
-                  <Dashboard accounts={accounts} onTransfer={() => navigate("/transfer")} onViewAll={() => navigate("/agent")} />
+                  <Dashboard accounts={accounts} onTransfer={() => navigate("/transfer")} onViewAll={() => navigate("/agent", { state: { viewAll: true } })} />
                 )
               }
             />

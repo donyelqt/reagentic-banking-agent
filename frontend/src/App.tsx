@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Landing from "./Landing";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
@@ -8,83 +9,169 @@ import { Brand } from "./components/Brand";
 import { getAccounts, sessionFromToken } from "./api";
 import type { AccountView } from "./types";
 import FloatingChat from "./components/FloatingChat";
+import { Sidebar, SidebarNav, MenuIcon } from "./components/Sidebar/Sidebar";
 
-type View = "dashboard" | "transfer" | "agent";
+type Stage = "landing" | "app";
 
 export default function App() {
-  const [stage, setStage] = useState<"landing" | "app">("landing");
+  const [stage, setStage] = useState<Stage>("landing");
   const [token, setToken] = useState<string | null>(localStorage.getItem("jwt"));
   const [accounts, setAccounts] = useState<AccountView[]>([]);
   const session = sessionFromToken(token);
   const role = session?.role ?? "USER";
   const isEmployee = role === "EMPLOYEE";
-  const navItems: View[] = isEmployee ? ["agent"] : ["dashboard", "transfer", "agent"];
-  const [view, setView] = useState<View>(isEmployee ? "agent" : "dashboard");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("sidebar-collapsed") === "1");
 
   useEffect(() => {
     if (!token || stage !== "app") return;
     getAccounts().then((r: any) => setAccounts(r.data ?? [])).catch(() => setAccounts([]));
   }, [token, stage]);
 
-  useEffect(() => {
-    if (!navItems.includes(view)) setView(navItems[0] ?? "dashboard");
-  }, [role]); // eslint-disable-line react-hooks/exhaustive-deps
-
   function logout() {
     localStorage.removeItem("jwt");
     setToken(null);
     setAccounts([]);
-    setView("dashboard");
+    setDrawerOpen(false);
     setStage("landing");
+  }
+
+  function refreshAccounts() {
+    getAccounts().then((r: any) => setAccounts(r.data ?? [])).catch(() => {});
   }
 
   if (stage === "landing") return <Landing onEnter={() => setStage("app")} />;
   if (!token) return <Login onLogin={(t) => { localStorage.setItem("jwt", t); setToken(t); }} />;
 
   return (
-    <div className="min-h-screen bg-bg text-ink">
-      <header className="sticky top-0 z-30 px-4 md:px-8 py-4">
-        <div className="glass rounded-full px-5 py-3 flex items-center justify-between shadow-soft">
-          <div className="flex items-center gap-5">
-            <button onClick={() => setView(navItems[0] ?? "dashboard")} className="flex items-center">
-              <Brand tone="light" />
-            </button>
-            <nav className="hidden md:flex items-center gap-1 bg-[#EDEBE3] rounded-full p-1">
-              {navItems.map((v) => (
-                <button key={v} onClick={() => setView(v)}
-                  className={`capitalize px-4 py-1.5 rounded-full text-sm transition ${view === v ? "bg-accent text-white shadow-soft" : "text-muted hover:text-ink"}`}>
-{v === "agent" ? (isEmployee ? "Ops Console" : "Agent") : v}
-                </button>
-              ))}
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:flex items-center gap-2 text-sm text-muted">
-              <span className="w-8 h-8 rounded-full bg-accent text-white grid place-items-center text-xs font-semibold">{session?.email?.[0]?.toUpperCase() ?? "U"}</span>
-              <span className="flex flex-col leading-tight">
-                <span>{session?.email ?? "user"}</span>
-                <span className="text-[10px] uppercase tracking-wide text-accent">{isEmployee ? "Ops Analyst" : "Customer"}</span>
-              </span>
-            </span>
-            <button onClick={logout} className="btn btn-ghost !py-2 !px-4 text-sm">Sign out</button>
-          </div>
-        </div>
-        <nav className="md:hidden mt-3 glass rounded-full p-1 flex justify-between">
-          {navItems.map((v) => (
-            <button key={v} onClick={() => setView(v)}
-              className={`flex-1 capitalize py-2 rounded-full text-sm transition ${view === v ? "bg-accent text-white shadow-soft" : "text-muted"}`}>{v === "agent" ? "Ops Console" : v}</button>
-          ))}
-        </nav>
-      </header>
+    <BrowserRouter>
+      <AppShell
+        isEmployee={isEmployee}
+        email={session?.email ?? "user"}
+        roleLabel={isEmployee ? "Ops Analyst" : "Customer"}
+        accounts={accounts}
+        collapsed={collapsed}
+        onToggleCollapse={() => {
+          const next = !collapsed;
+          setCollapsed(next);
+          localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
+        }}
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        onLogout={logout}
+        onAccountsChanged={refreshAccounts}
+      />
+    </BrowserRouter>
+  );
+}
 
-      <main className="px-4 md:px-8 pb-16 max-w-6xl mx-auto pt-6">
-        <div key={view} className="view-in">
-          {view === "dashboard" && <Dashboard accounts={accounts} onTransfer={() => setView("transfer")} />}
-          {view === "transfer" && <Transfer accounts={accounts} onDone={() => { getAccounts().then((r: any) => setAccounts(r.data ?? [])).catch(() => {}); setView("dashboard"); }} />}
-          {view === "agent" && <AgentChat isEmployee={isEmployee} onAccountsChanged={() => getAccounts().then((r: any) => setAccounts(r.data ?? [])).catch(() => {})} />}
+function AppShell({
+  isEmployee,
+  email,
+  roleLabel,
+  accounts,
+  collapsed,
+  onToggleCollapse,
+  drawerOpen,
+  setDrawerOpen,
+  onLogout,
+  onAccountsChanged,
+}: {
+  isEmployee: boolean;
+  email: string;
+  roleLabel: string;
+  accounts: AccountView[];
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+  drawerOpen: boolean;
+  setDrawerOpen: (v: boolean) => void;
+  onLogout: () => void;
+  onAccountsChanged: () => void;
+}) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const onAgent = location.pathname === "/agent";
+
+  return (
+    <div className="flex min-h-screen bg-bg text-ink">
+      <Sidebar
+        isEmployee={isEmployee}
+        email={email}
+        roleLabel={roleLabel}
+        collapsed={collapsed}
+        onToggleCollapse={onToggleCollapse}
+        onLogout={onLogout}
+      />
+
+      {drawerOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div className="absolute inset-0 bg-black/40" aria-hidden="true" onClick={() => setDrawerOpen(false)} />
+          <div
+            className="absolute inset-y-0 left-0 w-64 bg-bg border-r border-line flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+          >
+            <div className="flex items-center justify-between h-16 px-4 border-b border-line">
+              <Brand tone="light" />
+              <button aria-label="Close navigation" onClick={() => setDrawerOpen(false)} className="btn btn-ghost !p-2 text-muted">
+                <span aria-hidden="true">✕</span>
+              </button>
+            </div>
+            <SidebarNav isEmployee={isEmployee} onNavigate={() => setDrawerOpen(false)} />
+          </div>
         </div>
-      </main>
-      {view !== 'agent' && <FloatingChat onExpand={() => setView('agent')} />}
+      )}
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 h-14 glass border-b border-line">
+          <button
+            aria-label="Open navigation"
+            aria-expanded={drawerOpen}
+            onClick={() => setDrawerOpen(true)}
+            className="btn btn-ghost !p-2 text-muted"
+          >
+            <MenuIcon />
+          </button>
+          <Brand tone="light" />
+        </div>
+
+        <main className="px-4 md:px-8 pb-16 max-w-6xl mx-auto pt-6 w-full">
+          <Routes>
+            <Route path="/" element={<Navigate to={isEmployee ? "/agent" : "/dashboard"} replace />} />
+            <Route
+              path="/dashboard"
+              element={
+                isEmployee ? (
+                  <Navigate to="/agent" replace />
+                ) : (
+                  <Dashboard accounts={accounts} onTransfer={() => navigate("/transfer")} />
+                )
+              }
+            />
+            <Route
+              path="/transfer"
+              element={
+                isEmployee ? (
+                  <Navigate to="/agent" replace />
+                ) : (
+                  <Transfer
+                    accounts={accounts}
+                    onDone={() => {
+                      onAccountsChanged();
+                      navigate("/dashboard");
+                    }}
+                  />
+                )
+              }
+            />
+            <Route path="/agent" element={<AgentChat isEmployee={isEmployee} onAccountsChanged={onAccountsChanged} />} />
+            <Route path="*" element={<Navigate to={isEmployee ? "/agent" : "/dashboard"} replace />} />
+          </Routes>
+        </main>
+      </div>
+
+      {!onAgent && <FloatingChat onExpand={() => navigate("/agent")} />}
     </div>
   );
 }

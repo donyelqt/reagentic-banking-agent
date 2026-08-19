@@ -5,6 +5,7 @@ import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import Transfer from "./components/Transfer";
 import ActivityPage from "./components/ActivityPage";
+import LedgerConsole from "./components/LedgerConsole";
 import AgentChat from "./components/AgentChat";
 import { Brand } from "./components/Brand";
 import { getAccounts, sessionFromToken } from "./api";
@@ -178,6 +179,16 @@ function AppShell({
               }
             />
             <Route path="/agent" element={<AgentChat isEmployee={isEmployee} onAccountsChanged={onAccountsChanged} />} />
+            <Route
+              path="/ops"
+              element={
+                isEmployee ? (
+                  <LedgerConsole accounts={accounts} />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
+            />
             <Route path="*" element={<Navigate to={isEmployee ? "/agent" : "/dashboard"} replace />} />
           </Routes>
         </main>

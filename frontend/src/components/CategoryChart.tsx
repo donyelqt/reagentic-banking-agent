@@ -1,7 +1,8 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import type { CategorySpend } from '../types'
+import { CATEGORY_COLORS } from '../lib/chartColors'
 
-const COLORS = ['#2D43F5', '#0CA678', '#F59E0B', '#E5484D', '#6A4BFF', '#0EA5E9', '#C9A227', '#14130F']
+export { CATEGORY_COLORS }
 
 function label(category: string): string {
   return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase()
@@ -61,7 +62,7 @@ export const CategoryChart = ({
                   outerRadius={90}
                   paddingAngle={3}
                 >
-                  {summary.map((_, i) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
+                  {summary.map((_, i) => <Cell key={`cell-${i}`} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />)}
                 </Pie>
                 <Tooltip
                   formatter={(v: any, name: any) => [money(v), label(String(name))]}
@@ -74,7 +75,7 @@ export const CategoryChart = ({
             {summary.map((s, i) => (
               <li key={s.category} className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2 text-ink">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }} />
                   {label(s.category)}
                 </span>
                 <span className="font-medium font-mono">{money(s.total)}</span>

@@ -99,6 +99,41 @@ export async function classifySpending(entries: LedgerEntry[]): Promise<Category
     .sort((a, b) => b.total - a.total);
 }
 
+/**
+ * Classifies each spending entry of an account into its category.
+ * The classify endpoint echoes classified transactions in request order
+ * (deterministic keyword classifier is the no-key default), so batches are
+ * joined positionally. If a batch ever fails to echo, the entry simply gets
+ * no chip rather than crashing the page.
+ */
+export async function classifyEntries(entries: LedgerEntry[]): Promise<Map<number, string>> {
+  const spend = entries.filter((e) => e.description && parseFloat(e.signedAmount) < 0);
+  const result = new Map<number, string>();
+  if (spend.length === 0) return result;
+
+  for (let i = 0; i < spend.length; i += CLASSIFY_BATCH) {
+    const batch = spend.slice(i, i + CLASSIFY_BATCH);
+    try {
+      const json: any = await req("/api/agent/classify", {
+        method: "POST",
+        body: JSON.stringify({
+          transactions: batch.map((e) => ({ description: e.description, amount: e.signedAmount }))
+        })
+      });
+      const data = json?.data ?? json;
+      const items: { category?: string }[] = data?.transactions ?? [];
+      if (items.length !== batch.length) continue;
+      batch.forEach((e, idx) => {
+        const category = items[idx]?.category;
+        if (category) result.set(e.entryId, category);
+      });
+    } catch {
+      continue;
+    }
+  }
+  return result;
+}
+
 export function sessionFromToken(token: string | null): { email: string; role: string } | null {
   if (!token) return null;
   try {

@@ -39,7 +39,7 @@ class StatementCsvRendererTest {
     @Test
     void rendersHeaderRowFirst() {
         String[] lines = lines(StatementCsvRenderer.render(List.of()));
-        assertEquals("date,type,payment_id,signed_amount,balance_after", lines[0]);
+        assertEquals("date,description,type,reference,amount,balance", lines[0]);
     }
 
     @Test
@@ -67,6 +67,32 @@ class StatementCsvRendererTest {
     }
 
     @Test
+    void humanizesKnownTypesIntoDescriptions() {
+        String[] lines = lines(StatementCsvRenderer.render(List.of(
+                entry(1785324900000L, "OPENING", "OPENING", "1000.00", "1000.00"),
+                entry(1785411300000L, "pmt-1", "DEBIT", "-50.00", "950.00"),
+                entry(1785411300000L, "pmt-2", "CREDIT", "25.00", "975.00"),
+                entry(1785411300000L, "pmt-3", "DEBIT_FAILED", "-50.00", "925.00"),
+                entry(1785411300000L, "pmt-3", "COMPENSATE", "50.00", "975.00"),
+                entry(1785411300000L, "pmt-4", "FEE", "-2.00", "973.00"))));
+        assertEquals("Opening balance", lines[1].split(",")[1]);
+        assertEquals("Transfer out", lines[2].split(",")[1]);
+        assertEquals("Transfer in", lines[3].split(",")[1]);
+        assertEquals("Failed transfer", lines[4].split(",")[1]);
+        assertEquals("Refund", lines[5].split(",")[1]);
+        assertEquals("FEE", lines[6].split(",")[1]);
+    }
+
+    @Test
+    void keepsRawTypeColumnForMachineConsumers() {
+        String[] lines = lines(StatementCsvRenderer.render(
+                List.of(entry(1785324900000L, "pmt-1", "DEBIT", "-50.00", "950.00"))));
+        String[] cols = lines[1].split(",");
+        assertEquals("Transfer out", cols[1]);
+        assertEquals("DEBIT", cols[2]);
+    }
+
+    @Test
     void formatsSignedAmountsPlainAndSigned() {
         String[] lines = lines(StatementCsvRenderer.render(List.of(
                 entry(1785324900000L, "pmt-1", "DEBIT", "-50.00", "950.00"),
@@ -80,8 +106,8 @@ class StatementCsvRendererTest {
         String[] lines = lines(StatementCsvRenderer.render(List.of(
                 entry(1785324900000L, "pmt-1", "DEBIT", "-50.00", "950.00"),
                 entry(1785411300000L, "pmt-2", "CREDIT", "25.00", "975.00"))));
-        assertEquals("950.00", lines[1].split(",")[4]);
-        assertEquals("975.00", lines[2].split(",")[4]);
+        assertEquals("950.00", lines[1].split(",")[5]);
+        assertEquals("975.00", lines[2].split(",")[5]);
     }
 
     @Test

@@ -4,12 +4,20 @@ import dev.reagentic.ledger.domain.LedgerEntry;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 public final class StatementCsvRenderer {
 
     private static final String BOM = "\uFEFF";
-    private static final String HEADER = "date,type,payment_id,signed_amount,balance_after";
+    private static final String HEADER = "date,description,type,reference,amount,balance";
     private static final String CRLF = "\r\n";
+
+    private static final Map<String, String> DESCRIPTIONS = Map.of(
+            "OPENING", "Opening balance",
+            "DEBIT", "Transfer out",
+            "CREDIT", "Transfer in",
+            "DEBIT_FAILED", "Failed transfer",
+            "COMPENSATE", "Refund");
 
     private StatementCsvRenderer() {
     }
@@ -19,6 +27,8 @@ public final class StatementCsvRenderer {
         for (LedgerEntry e : entries) {
             sb.append(CRLF)
                     .append(escape(Instant.ofEpochMilli(e.getCreatedAt()).toString()))
+                    .append(',')
+                    .append(escape(describe(e.getType())))
                     .append(',')
                     .append(escape(e.getType()))
                     .append(',')
@@ -30,6 +40,10 @@ public final class StatementCsvRenderer {
         }
         sb.append(CRLF);
         return sb.toString();
+    }
+
+    private static String describe(String type) {
+        return type == null ? "" : DESCRIPTIONS.getOrDefault(type, type);
     }
 
     private static String escape(String field) {

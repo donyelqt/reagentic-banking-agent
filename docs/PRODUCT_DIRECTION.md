@@ -112,10 +112,10 @@ Adopted from the team pitch (credited in §15), fed by the bank's own data — n
 
 **Story 1 — Supervised transfer (USER)**
 As a customer, I want the agent to arrange a transfer but require my confirmation, so I control every movement.
-- [ ] Agent returns `pendingSteps`; nothing executes
-- [ ] Frontend shows the plan (from/to/amount) and an Approve action
-- [ ] Approval re-calls with the same idempotency key; executing twice yields one payment
-- [ ] A plan step for `transferFunds` can never arrive with `confirmationRequired=false`
+   - [x] Agent returns `pendingSteps`; nothing executes
+   - [x] Frontend shows the plan (from/to/amount) and an Approve action
+   - [x] Approval re-calls with the same idempotency key; executing twice yields one payment
+   - [x] A plan step for `transferFunds` can never arrive with `confirmationRequired=false` (trust-boundary invariant in `Executor`; planner flag + executor enforcement; regression test in `ExecutorTest`)
 
 **Story 2 — Reconciliation with root cause (EMPLOYEE)**
 As an ops analyst, I want to reconcile any account and see the mismatch's cause, so I can fix breaks fast.

@@ -55,7 +55,7 @@ The product spine is **Direction B** (agentic operations). The insight arc (spen
 ## 5. Strategic Context
 
 - **Business goal:** Deliver an unmistakably enterprise-grade banking demo for the Accenture Cloud Elite internship — one that graders recognize as real engineering, not a tutorial.
-- **Why now:** The platform (6 services, saga/outbox, Kafka ledger, JWT, dual-role agent) is built, tested (60/60), and demo-ready. The remaining work is the insight arc that makes the demo's opening act visual.
+- **Why now:** The platform (6 services, saga/outbox, Kafka ledger, JWT, dual-role agent) is built, tested (76/76), and demo-ready. The remaining work is the insight arc that makes the demo's opening act visual.
 - **Competitive landscape (peers):** Most cohort demos are a single Spring Boot service plus a chatbot, or read-only analytics dashboards. Both are beaten by a system where the AI *acts* with proof and guardrails.
 - **Decision this doc records:** Direction B is the product. See §7 for the full decision log.
 
@@ -106,7 +106,7 @@ Adopted from the team pitch, fed by the bank's own data — no CSV:
 | Metric | Target |
 |---|---|
 | Demo-time: hero flows execute live without failure | reconcile (clean + injected break), supervised transfer, 403 role denials, self-explaining chat onboarding ("What can you do?" → chips → approve) |
-| Test suite | 60/60 passing (`mvnw clean test`), no regressions on PR merge |
+| Test suite | 76/76 passing (`mvnw test`), no regressions on PR merge |
 | Guardrail verification | transfer without approval is impossible (server-enforced); LLM drift falls back, never mislabels |
 | Insight arc demo beat | charts + analyze action live from ledger data within the next increment |
 | CSV export | one endpoint, RFC 4180-clean output verifiable against the ledger (row count == Σ entries; balance column == `balance_after`) |
@@ -164,6 +164,6 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 ## 14. Open Questions
 
 - ~~Charts library choice~~ — **Resolved:** recharts, already in production use for the cash-flow chart. Remaining: the chart data contract with `/classify` (response shape for category breakdown)
+- ~~CSV export placement and scope~~ — **Resolved:** ledger-service serves `GET /api/ledger/{accountId}/statement.csv` (ownership-scoped via account-service, 404 for cross-account) and `GET /api/ledger/internal/{accountId}/statement.csv` (EMPLOYEE-only, any account), mirroring the existing list endpoints; RFC 4180-clean (UTF-8 BOM, CRLF, ISO-8601 UTC dates, signed amounts, running balance)
 - Whether the seed history lives in ledger-service migration or account-service (ledger is the source for chart data)
-- Where the CSV export endpoint lives (ledger-service owns the projection; account-service owns entitlements) and whether it's scoped to USER or also EMPLOYEE
 - Demo-day LLM provider: Gemini key set, or deterministic fallback presented knowingly

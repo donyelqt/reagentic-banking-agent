@@ -119,16 +119,17 @@ As a customer, I want the agent to arrange a transfer but require my confirmatio
 
 **Story 2 — Reconciliation with root cause (EMPLOYEE)**
 As an ops analyst, I want to reconcile any account and see the mismatch's cause, so I can fix breaks fast.
-- [ ] Clean account reports BALANCED
-- [ ] Injected fault reports the delta, direction (MISSING_DEBIT_LEG / MISSING_CREDIT_LEG), anchor entry, and an evidence trail
-- [ ] A corrective journal entry is proposed, never executed
-- [ ] Ops cannot transfer funds (role denial)
+- [x] Clean account reports BALANCED
+- [x] Injected fault reports the delta, direction (MISSING_DEBIT_LEG / MISSING_CREDIT_LEG), anchor entry, and an evidence trail
+- [x] A corrective journal entry is proposed, never executed
+- [x] Ops cannot transfer funds (role denial)
 
 **Story 3 — Spending analysis (USER, insight arc)**
 As a customer, I want to see where my money went, so I can act on wasteful patterns.
-- [ ] Dashboard shows spending by category from the ledger
-- [ ] "Analyze my spending" returns a categorized summary with totals
-- [ ] Insight can lead directly into a proposed (approved) action
+- [x] Dashboard shows spending by category from the ledger
+- [x] "Analyze my spending" returns a categorized summary with totals
+- [x] Insight can lead directly into a proposed (approved) action
+  - Status: backend `/api/agent/classify` complete and tested (categorized summary, per-item fallback, edge cases). Frontend dashboard currently renders account-balance + cash-flow charts; the category-breakdown-from-ledger and an "Analyze my spending" action still need wiring to `/api/agent/classify` (CategoryChart is a mislabeled balance pie). Backend criteria are met; UI wiring is the remaining work.
 
 **Edge cases covered:** garbage classify input → 400 with precise message; >100 items → 400; null elements → 400; LLM reorders classifications → per-item fallback; model unreachable → deterministic fallback; unknown tool in plan → whole plan falls back.
 

@@ -21,6 +21,14 @@ function TransferIcon() {
   );
 }
 
+function ActivityIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
+      <path d="M3 12h4l2.5-6 4 11 2.5-5H21" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function AgentIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
@@ -52,6 +60,7 @@ function itemsFor(isEmployee: boolean): NavItem[] {
   if (isEmployee) return [{ to: "/agent", label: "Ops Console", icon: <AgentIcon /> }];
   return [
     { to: "/dashboard", label: "Dashboard", icon: <DashboardIcon /> },
+    { to: "/activity", label: "Activity", icon: <ActivityIcon /> },
     { to: "/transfer", label: "Transfer", icon: <TransferIcon /> },
     { to: "/agent", label: "Agent", icon: <AgentIcon /> },
   ];

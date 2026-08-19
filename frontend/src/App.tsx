@@ -4,6 +4,7 @@ import Landing from "./Landing";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import Transfer from "./components/Transfer";
+import ActivityPage from "./components/ActivityPage";
 import AgentChat from "./components/AgentChat";
 import { Brand } from "./components/Brand";
 import { getAccounts, sessionFromToken } from "./api";
@@ -146,7 +147,17 @@ function AppShell({
                 isEmployee ? (
                   <Navigate to="/agent" replace />
                 ) : (
-                  <Dashboard accounts={accounts} onTransfer={() => navigate("/transfer")} onViewAll={() => navigate("/agent", { state: { viewAll: true } })} />
+                  <Dashboard accounts={accounts} onTransfer={() => navigate("/transfer")} onViewAll={() => navigate("/activity")} />
+                )
+              }
+            />
+            <Route
+              path="/activity"
+              element={
+                isEmployee ? (
+                  <Navigate to="/agent" replace />
+                ) : (
+                  <ActivityPage accounts={accounts} />
                 )
               }
             />

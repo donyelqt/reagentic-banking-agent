@@ -1,8 +1,25 @@
 import type { Step } from '../types'
 
 export default function ApprovalModal({ steps, onApprove, onCancel }: { steps: Step[]; onApprove: () => void; onCancel: () => void }) {
+  
+  // Helper function to intercept the raw data and format it nicely
+  const formatStepDetails = (args: any) => {
+    try {
+      const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args;
+      
+      if (parsedArgs && parsedArgs.amount) {
+        return `Amount: ₱${parsedArgs.amount}`;
+      }
+      
+      // Fallback if it's an action without an amount
+      return "Action details attached"; 
+    } catch (error) {
+      return "Action details attached";
+    }
+  };
+
   return (
-    <div className="absolute inset-0 z-20 grid place-items-end sm:place-items-center p-3 backdrop-in bg-[#0A0B14]/30">
+    <div className="absolute inset-0 z-20 grid place-items-end sm:place-items-center p-3 backdrop-in bg-[#0A0B14]/80">
       <div className="glass rounded-[24px] p-5 w-full max-w-md modal-in shadow-lift">
         <div className="flex items-center gap-2 mb-3">
           <span className="w-7 h-7 rounded-full grid place-items-center bg-gold/15 text-gold font-display">!</span>
@@ -13,7 +30,10 @@ export default function ApprovalModal({ steps, onApprove, onCancel }: { steps: S
           {steps.map((s) => (
             <li key={s.stepId} className="flex items-center justify-between rounded-xl border border-line bg-bg px-3 py-2 text-sm">
               <span className="font-medium capitalize">{s.tool.replace(/([A-Z])/g, ' $1')}</span>
-              <span className="text-muted font-mono text-xs truncate max-w-[52%]">{JSON.stringify(s.args)}</span>
+              {/* Replaced JSON.stringify with our new helper function */}
+              <span className="text-sm font-medium truncate max-w-[52%] text-right">
+                {formatStepDetails(s.args)}
+              </span>
             </li>
           ))}
         </ul>

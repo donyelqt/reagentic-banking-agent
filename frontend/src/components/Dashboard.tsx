@@ -3,6 +3,8 @@ import { getLedger } from '../api'
 import type { AccountView, LedgerEntry } from '../types'
 import { useCountUp } from '../lib/useCountUp'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { CategoryChart } from './CategoryChart';
+import { SpendingTrendChart } from './SpendingTrendChart';
 
 export default function Dashboard({ accounts, onTransfer }: { accounts: AccountView[]; onTransfer: () => void }) {
   const [allActivity, setAllActivity] = useState<LedgerEntry[]>([])
@@ -36,6 +38,13 @@ export default function Dashboard({ accounts, onTransfer }: { accounts: AccountV
         {accounts.map((a, i) => <AccountCard key={a.accountId} account={a} index={i} />)}
       </div>
 
+      {/* NEW RECHARTS DASHBOARD WIDGETS */}
+      <div className="grid lg:grid-cols-2 gap-6 mt-6">
+        <CategoryChart />
+        <SpendingTrendChart />
+      </div>
+
+      {/* Existing Cash Flow & Activity */}
       <div className="grid lg:grid-cols-2 gap-6 mt-6">
         <div className="card p-6 flex flex-col">
           <div className="mb-6">

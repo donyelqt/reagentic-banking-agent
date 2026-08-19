@@ -3,6 +3,8 @@ import { getLedger, downloadStatementCsv, downloadStatementExcel, classifyEntrie
 import type { AccountView, LedgerEntry } from '../types'
 import { CATEGORY_COLORS } from '../lib/chartColors'
 
+const PAGE = 50
+
 function money(v: number, sign = false): string {
   const abs = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   return (sign ? (v >= 0 ? '+' : '−') : v < 0 ? '−' : '') + '$' + abs
@@ -22,6 +24,7 @@ export default function ActivityPage({ accounts }: { accounts: AccountView[] }) 
   const [accountId, setAccountId] = useState(accounts[0]?.accountId ?? '')
   const [entries, setEntries] = useState<LedgerEntry[]>([])
   const [categories, setCategories] = useState<Map<number, string>>(new Map())
+  const [visible, setVisible] = useState(PAGE)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [dlError, setDlError] = useState<string | null>(null)
@@ -32,6 +35,7 @@ export default function ActivityPage({ accounts }: { accounts: AccountView[] }) 
     let cancelled = false
     setLoading(true)
     setError(false)
+    setVisible(PAGE)
     getLedger(accountId)
       .then(async (r: any) => {
         if (cancelled) return
@@ -45,6 +49,7 @@ export default function ActivityPage({ accounts }: { accounts: AccountView[] }) 
     return () => { cancelled = true }
   }, [accountId, reload])
 
+  const rows = entries.slice(0, visible)
   const run = (fn: () => Promise<void>, labelName: string) => {
     setDlError(null)
     fn().catch(() => setDlError(`Couldn't download ${labelName}. Try again.`))
@@ -107,10 +112,17 @@ export default function ActivityPage({ accounts }: { accounts: AccountView[] }) 
           </div>
         ) : (
           <>
-            <p className="text-xs text-muted mb-2">{entries.length} movements · newest first</p>
-            <ul className="divide-y divide-line max-h-none md:max-h-[62vh] overflow-y-auto md:pr-1">
-              {entries.map((e) => <ActivityRow key={e.entryId} e={e} category={categories.get(e.entryId)} />)}
+            <ul className="divide-y divide-line">
+              {rows.map((e) => <ActivityRow key={e.entryId} e={e} category={categories.get(e.entryId)} />)}
             </ul>
+            {visible < entries.length && (
+              <div className="flex items-center justify-center gap-4 mt-5">
+                <button onClick={() => setVisible((v) => v + PAGE)} className="btn btn-ghost !py-2 !px-5 text-sm">
+                  Show more
+                </button>
+                <span className="text-xs text-muted">Showing {rows.length} of {entries.length}</span>
+              </div>
+            )}
           </>
         )}
       </div>

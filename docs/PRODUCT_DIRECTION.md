@@ -157,8 +157,8 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 
 ## 13. Roadmap
 
-- **Done:** platform, dual-role agent, guardrails, classification, 60/60 tests, PR #3 hardening, landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16)
-- **Next (committed):** insight arc — V3 seed history → category charts + analyze action; CSV statement export (RFC 4180-clean, ledger-owned projection)
+- **Done:** platform, dual-role agent, guardrails, classification, 76/76 tests, PR #3 hardening, landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16), CSV statement export (RFC 4180-clean, ledger-owned projection, USER + EMPLOYEE routes)
+- **Next (committed):** insight arc — V3 seed history → category charts + analyze action
 - **Later (vision only, pitch-ready):** fraud detection, anomaly scoring, more agent tools, CI/CD test gate on merge (ADR 0006) + branch protection
 
 ## 14. Open Questions

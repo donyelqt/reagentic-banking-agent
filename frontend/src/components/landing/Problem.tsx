@@ -15,7 +15,7 @@ const pains = [
   {
     n: '03',
     title: 'Trust is a checkbox',
-    body: 'Automation asks once, then runs unchecked. One malformed CSV, one stale rate, one silent retry — and the ledger is wrong.'
+    body: 'Automation asks once, then runs unchecked. One stale rate, one silent retry, one unapproved transfer — and the ledger is wrong.'
   }
 ]
 

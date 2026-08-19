@@ -3,8 +3,11 @@ package dev.reagentic.ledger.web;
 import dev.reagentic.common.dto.ApiResponse;
 import dev.reagentic.ledger.domain.LedgerEntry;
 import dev.reagentic.ledger.repository.LedgerRepository;
+import dev.reagentic.ledger.service.StatementCsvRenderer;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -65,6 +68,29 @@ public class LedgerController {
             throw new AccessDeniedException("EMPLOYEE role required");
         }
         return ApiResponse.ok(toViews(repository.findByAccountIdOrderByCreatedAtAsc(accountId), from, to));
+    }
+
+    @GetMapping("/{accountId}/statement.csv")
+    public ResponseEntity<String> statement(HttpServletRequest request, @PathVariable String accountId) {
+        verifyOwnership(request.getHeader("Authorization"), accountId);
+        return statementResponse(repository.findByAccountIdOrderByCreatedAtAsc(accountId), accountId);
+    }
+
+    @GetMapping("/internal/{accountId}/statement.csv")
+    public ResponseEntity<String> statementInternal(Authentication auth, @PathVariable String accountId) {
+        if (!isEmployee(auth)) {
+            throw new AccessDeniedException("EMPLOYEE role required");
+        }
+        return statementResponse(repository.findByAccountIdOrderByCreatedAtAsc(accountId), accountId);
+    }
+
+    private ResponseEntity<String> statementResponse(List<LedgerEntry> entries, String accountId) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"statement-"
+                                + accountId.replaceAll("[^A-Za-z0-9._-]", "_") + ".csv\"")
+                .body(StatementCsvRenderer.render(entries));
     }
 
     private List<LedgerView> toViews(List<LedgerEntry> entries, Long from, Long to) {

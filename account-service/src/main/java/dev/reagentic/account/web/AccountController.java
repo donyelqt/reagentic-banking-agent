@@ -57,6 +57,17 @@ public class AccountController {
         return ApiResponse.ok(new BalanceView(a.getAccountId(), Money.of(a.getBalance())));
     }
 
+    @GetMapping("/internal")
+    public ApiResponse<List<AccountView>> listInternal(Authentication auth) {
+        if (!isEmployee(auth)) {
+            throw new AccessDeniedException("EMPLOYEE role required");
+        }
+        List<AccountView> views = accountService.listAll().stream()
+                .map(a -> new AccountView(a.getAccountId(), a.getType(), Money.of(a.getBalance())))
+                .toList();
+        return ApiResponse.ok(views);
+    }
+
     @PostMapping("/internal/debit")
     public ApiResponse<BalanceView> debit(Authentication auth, @Valid @RequestBody MutateRequest req) {
         Money balance = accountService.debit(auth.getName(), req.accountId(), Money.of(req.amount()), req.idempotencyKey());

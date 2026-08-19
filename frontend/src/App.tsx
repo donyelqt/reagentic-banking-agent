@@ -183,7 +183,7 @@ function AppShell({
               path="/ops"
               element={
                 isEmployee ? (
-                  <LedgerConsole accounts={accounts} />
+                  <LedgerConsole />
                 ) : (
                   <Navigate to="/dashboard" replace />
                 )

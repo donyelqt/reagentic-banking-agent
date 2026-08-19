@@ -40,6 +40,21 @@ export const transfer = (body: {
 export const getLedger = (accountId: string) =>
   req<{ success: boolean; data: any[] }>("/api/ledger/" + accountId);
 
+export async function downloadStatement(accountId: string): Promise<void> {
+  const token = localStorage.getItem("jwt");
+  const res = await fetch(API + `/api/ledger/${accountId}/statement.csv`, {
+    headers: token ? { Authorization: "Bearer " + token } : {}
+  });
+  if (!res.ok) throw new Error("Download failed: HTTP " + res.status);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `statement-${accountId}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export const agentChat = (body: ChatRequest) =>
   req<AgentResponse>("/api/agent/chat", { method: "POST", body: JSON.stringify(body) });
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getLedger } from '../api'
+import { getLedger, downloadStatement } from '../api'
 import type { AccountView, LedgerEntry } from '../types'
 import { useCountUp } from '../lib/useCountUp'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -115,6 +115,16 @@ function AccountCard({ account, index }: { account: AccountView; index: number }
       <div className="mt-5 font-display text-4xl">${amt}</div>
       <div className="mt-4 h-1.5 rounded-full bg-[#EDEBE3] overflow-hidden">
         <div className="h-full rounded-full" style={{ width: `${Math.min(100, (parseFloat(account.balance || '0') / 2000) * 100)}%`, background: 'linear-gradient(90deg,#2D43F5,#6A4BFF)' }} />
+      </div>
+      <div className="mt-4 flex items-center justify-between">
+        <span className="text-xs text-muted font-mono">{account.accountId}</span>
+        <button
+          onClick={() => downloadStatement(account.accountId).catch(() => {})}
+          className="text-xs font-medium text-gold bg-gold/15 hover:bg-gold/25 px-3 py-1.5 rounded-full transition-colors"
+          title="Download statement (CSV)"
+        >
+          Download CSV
+        </button>
       </div>
     </div>
   )

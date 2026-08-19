@@ -10,7 +10,7 @@
 
 We're building an **agentic banking operations platform** — a real multi-service online bank whose AI assistant does not just answer questions, it *proposes and executes bank operations* behind an enforced human-approval gate. For a customer, the agent checks balances, reads transactions, and arranges transfers that never execute without explicit confirmation. For an ops analyst, it reconciles accounts against the immutable ledger, finds the root cause of a break, and proposes the corrective journal entry for review. The result is a demo that proves an AI can be trusted around money — because the system's guardrails are backend invariants, not model suggestions.
 
-The product spine is **Direction B** (agentic operations). The insight arc (spending visualization + "analyze my spending") is an approved feature on top of that spine — adopted from the team pitch (§8). CSV upload as a core mechanism is **rejected** (§7).
+The product spine is **Direction B** (agentic operations). The insight arc (spending visualization + "analyze my spending") is an approved feature on top of that spine — adopted from the team pitch (§8). CSV is a two-way decision: upload as a core mechanism is **rejected**, while an RFC 4180-clean statement **export** is **approved** — the bank's records leave as data, but no external file ever becomes a source of truth (§7). The customer-facing shell (landing funnel, chat onboarding with clickable capability chips) is shipped and demo-first (§10).
 
 ## 2. Positioning Statement
 
@@ -85,16 +85,18 @@ A multi-service bank (gateway → auth/account/payment/ledger/notification) with
 |---|---|---|
 | Product spine | **Direction B: agentic banking operations** | The platform is built, tested, and defensible; it is the harder and more impressive engineering |
 | Insight arc | **Adopted as a feature** | "Understand my money" is a strong demo opening act; it runs on the bank's own ledger data |
-| CSV upload as core mechanism | **Rejected** | Two sources of truth: uploaded files are disconnected from balances and the ledger; a bank that needs CSVs to analyze its own records is incoherent. The demo money is synthetic but *self-consistent* by construction (balances == Σ ledger, seeded via Flyway). Rich history comes from a seed migration, not user uploads |
+| CSV upload as core mechanism | **Rejected** | We are the bank, not accounting software. The ledger is authoritative; an imported file creates a second truth the ledger must reconcile against — and the industry's documented CSV-import failure mode *is* duplicates and re-import drift (Continia reimport prevention, NetSuite/Cobase refresh duplicates, Sage "import ran twice, two copies of the same debit"). Two sources of truth is the disease this architecture exists to prevent. Rich history comes from a seed migration, not user uploads |
+| CSV statement export | **Adopted as a feature** | Read-only, RFC 4180-clean snapshot of the ledger (headers, UTF-8, CRLF, ISO dates, signed amounts, running balance) — the portability every real bank ships (Westpac, Huntington, PPF Banka, ECB T2S, Canada Open Finance). Zero drift risk: the ledger stays authoritative; the export is a projection. Bonus: real-bank CSVs are famously broken (StatementPro), so "export done right" is a demo talking point |
+| Agent onboarding (capability pre-prompt + clickable chips) | **Adopted** | "What can you do?" is the discoverability hook: a pinned prompt that opens the capability map, then role-aware action chips that make the demo self-explaining to judges without a help menu |
 | Live bank / Open Banking integration | **Out of scope** | BSP accreditation is not attainable in-sprint; the ledger is the more credible data source anyway |
 | Corrective journal execution | **Out of scope** | The agent proposes; humans execute. This is the trust story, not a limitation |
 
 ## 8. The Insight Arc (committed next)
 
-Adopted from the team pitch (credited in §15), fed by the bank's own data — no CSV:
+Adopted from the team pitch, fed by the bank's own data — no CSV:
 
-1. **`V3__seed_demo_history.sql`** — a year of realistic, categorized transactions whose `balance_after` chain lands exactly on the seeded balances (self-consistent by construction; reconciliation stays green).
-2. **Dashboard charts** — spending by category from `/api/agent/classify` over real ledger transactions (one source of truth).
+1. **`V3__seed_demo_history.sql`** — a year of realistic, categorized transactions whose `balance_after` chain lands exactly on the seeded balances (self-consistent by construction; reconciliation stays green). **Required, not nice-to-have:** the current cash-flow chart exposes the sparse-history gap — the axis reads "Jan 1, Aug 16-18" because seed data has a seven-month dead zone; charts are only believable with real history.
+2. **Dashboard charts** — spending by category from `/api/agent/classify` over real ledger transactions (one source of truth). Cash-flow chart (recharts) is live; the category breakdown (the mislabeled balance pie) and the analyze action are the remaining work.
 3. **"Analyze my spending" chat action** — the agent summarizes where money went and flags patterns (e.g., overspending on dining), then can *act* on it (transfer + approval modal).
 
 **Demo narrative (rising arc):** insight ("you overspent on dining") → propose ("transfer 500 to savings?") → approve (modal) → the ledger moves on screen.
@@ -103,10 +105,11 @@ Adopted from the team pitch (credited in §15), fed by the bank's own data — n
 
 | Metric | Target |
 |---|---|
-| Demo-time: hero flows execute live without failure | reconcile (clean + injected break), supervised transfer, 403 role denials |
+| Demo-time: hero flows execute live without failure | reconcile (clean + injected break), supervised transfer, 403 role denials, self-explaining chat onboarding ("What can you do?" → chips → approve) |
 | Test suite | 60/60 passing (`mvnw clean test`), no regressions on PR merge |
 | Guardrail verification | transfer without approval is impossible (server-enforced); LLM drift falls back, never mislabels |
 | Insight arc demo beat | charts + analyze action live from ledger data within the next increment |
+| CSV export | one endpoint, RFC 4180-clean output verifiable against the ledger (row count == Σ entries; balance column == `balance_after`) |
 
 ## 10. User Stories & Requirements
 
@@ -129,17 +132,17 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 - [x] Dashboard shows spending by category from the ledger
 - [x] "Analyze my spending" returns a categorized summary with totals
 - [x] Insight can lead directly into a proposed (approved) action
-  - Status: backend `/api/agent/classify` complete and tested (categorized summary, per-item fallback, edge cases). Frontend dashboard currently renders account-balance + cash-flow charts; the category-breakdown-from-ledger and an "Analyze my spending" action still need wiring to `/api/agent/classify` (CategoryChart is a mislabeled balance pie). Backend criteria are met; UI wiring is the remaining work.
+  - Status: backend `/api/agent/classify` complete and tested (categorized summary, per-item fallback, edge cases). Frontend renders balance + cash-flow charts from ledger data; the category breakdown (CategoryChart is still a mislabeled balance pie) and the "Analyze my spending" chat action need wiring to `/api/agent/classify`. The seed history (V3) is the prerequisite for believable charts — the current axis ("Jan 1, Aug 16-18") exposes the seven-month seed gap. Backend criteria are met; UI wiring + seed history are the remaining work.
 
 **Edge cases covered:** garbage classify input → 400 with precise message; >100 items → 400; null elements → 400; LLM reorders classifications → per-item fallback; model unreachable → deterministic fallback; unknown tool in plan → whole plan falls back.
 
 ## 11. Out of Scope
 
-- **CSV upload as a core mechanism** — rejected (§7); the bank analyzes its own records
+- **CSV upload as a core mechanism** — rejected (§7); the bank analyzes its own records. CSV *export* is in scope (§7)
 - **Live bank / Open Banking / BSP-regulated integrations**
 - **Executing corrective journal entries** — propose-only
 - **Fraud detection / anomaly scoring** — later vision (see §13)
-- **Multi-bank aggregation, mobile apps, real notifications (SMS/push)**
+- **Multi-bank aggregation, mobile apps, real notifications (SMS/push), CSV *import* of any kind**
 
 ## 12. Dependencies & Risks
 
@@ -147,17 +150,20 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 |---|---|
 | Demo day LLM key absent | Deterministic fallback is the default; Gemini key is a one-line `.env` change (see `docs/demo-runbook.md`) |
 | Insight arc slips scope | It is the *only* committed next increment; everything else stays proposed |
+| Sparse seed history makes charts unbelievable (Jan-1-to-Aug gap on the axis) | `V3__seed_demo_history.sql` lands before chart wiring ships; the balance chain is self-consistent by construction |
+| CSV export scope creep (parsers, formats, pagination) | Export is a read-only projection: one endpoint, one RFC 4180-clean format, no import counterpart, no parsing |
 | Stale jar in the demo image | Build the jar with `mvnw package` before `docker compose up --build` (documented in the demo runbook) |
 | Team story divergence (two pitch versions) | This doc is the canonical direction; the deck should be updated from it |
 
 ## 13. Roadmap
 
-- **Done:** platform, dual-role agent, guardrails, classification, 60/60 tests, PR #3 hardening
-- **Next (committed):** insight arc — V3 seed history → charts → analyze action
-- **Later (vision only, pitch-ready):** fraud detection, anomaly scoring, more agent tools, CI/CD + formal CI test gate
+- **Done:** platform, dual-role agent, guardrails, classification, 60/60 tests, PR #3 hardening, landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16)
+- **Next (committed):** insight arc — V3 seed history → category charts + analyze action; CSV statement export (RFC 4180-clean, ledger-owned projection)
+- **Later (vision only, pitch-ready):** fraud detection, anomaly scoring, more agent tools, CI/CD test gate on merge (ADR 0006) + branch protection
 
 ## 14. Open Questions
 
-- Charts library choice (Recharts is the pitch's suggestion — confirm) and chart data contract with `/classify`
+- ~~Charts library choice~~ — **Resolved:** recharts, already in production use for the cash-flow chart. Remaining: the chart data contract with `/classify` (response shape for category breakdown)
 - Whether the seed history lives in ledger-service migration or account-service (ledger is the source for chart data)
+- Where the CSV export endpoint lives (ledger-service owns the projection; account-service owns entitlements) and whether it's scoped to USER or also EMPLOYEE
 - Demo-day LLM provider: Gemini key set, or deterministic fallback presented knowingly

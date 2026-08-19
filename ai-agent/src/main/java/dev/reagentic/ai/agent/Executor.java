@@ -37,7 +37,13 @@ public class Executor {
                 results.add(new StepResult(step.stepId(), false, null, gate));
                 continue;
             }
-            if (step.confirmationRequired() && !approvedSet.contains(step.stepId())) {
+            // Money-movement steps always require human approval, regardless of what a
+            // planner or client-supplied plan claims. Trust-boundary guard (Story 1,
+            // criterion 4): a transferFunds step can never execute without an explicit
+            // approval, even if confirmationRequired arrived as false.
+            boolean needsApproval = step.confirmationRequired()
+                    || "transferFunds".equals(step.tool());
+            if (needsApproval && !approvedSet.contains(step.stepId())) {
                 pending.add(step);
                 continue;
             }

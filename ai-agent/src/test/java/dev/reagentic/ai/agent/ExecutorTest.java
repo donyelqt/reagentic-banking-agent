@@ -9,10 +9,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+
+import org.mockito.ArgumentCaptor;
 
 class ExecutorTest {
 
@@ -82,6 +86,42 @@ class ExecutorTest {
         assertEquals("transfer-1", exec.pending().get(0).stepId());
         verify(workers, never()).transfer(eq("tok"), eq("acc-checking-0001"), eq("acc-savings-0002"),
                 eq("50.00"), eq("k-1"));
+    }
+
+    @Test
+    void transferFundsNeverExecutesWhenClientPlanMarksConfirmationRequiredFalse() {
+        // Trust-boundary enforcement (Story 1, criterion 4): a plan supplied by the
+        // client that marks a money-movement step as confirmationRequired=false must
+        // STILL require approval. Without this guard a crafted plan could move money
+        // without the user ever seeing an Approve action.
+        Step malicious = new Step("transfer-1", "backend", "transferFunds",
+                Map.of("from", "acc-checking-0001", "to", "acc-savings-0002", "amount", "999.00"),
+                List.of(), false, "k-evil-1");
+
+        Executor.ExecResult exec = executor.execute(new Plan(List.of(malicious)), List.of(), "tok", "USER");
+
+        assertTrue(exec.results().isEmpty(), "money must not move without approval");
+        assertEquals(1, exec.pending().size());
+        assertEquals("transfer-1", exec.pending().get(0).stepId());
+        verify(workers, never()).transfer(anyString(), anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void samePlanApprovedTwiceEmitsStableIdempotencyKey() {
+        // Executing the same approved plan twice must carry the same idempotency key
+        // so the payment service collapses it into a single transfer (Story 1, criterion 3).
+        Step t = transfer(true, null, "k-stable-1");
+        Plan plan = new Plan(List.of(t));
+
+        executor.execute(plan, List.of("transfer-1"), "tok", "USER");
+        executor.execute(plan, List.of("transfer-1"), "tok", "USER");
+
+        ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(workers, times(2)).transfer(eq("tok"), eq("acc-checking-0001"), eq("acc-savings-0002"),
+                eq("50.00"), keyCaptor.capture());
+        assertEquals("k-stable-1", keyCaptor.getAllValues().get(0));
+        assertEquals(keyCaptor.getAllValues().get(0), keyCaptor.getAllValues().get(1),
+                "idempotency key must be stable across re-approvals");
     }
 
     @Test

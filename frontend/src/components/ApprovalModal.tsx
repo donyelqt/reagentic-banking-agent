@@ -1,6 +1,6 @@
 import type { Step } from '../types'
 
-export default function ApprovalModal({ steps, onApprove, onCancel }: { steps: Step[]; onApprove: () => void; onCancel: () => void }) {
+export default function ApprovalModal({ steps, onApprove, onCancel, busy }: { steps: Step[]; onApprove: () => void; onCancel: () => void; busy?: boolean }) {
   
   // Helper function to intercept the raw data and format it nicely
   const formatStepDetails = (args: any) => {
@@ -8,8 +8,10 @@ export default function ApprovalModal({ steps, onApprove, onCancel }: { steps: S
       const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args;
 
       if (parsedArgs && parsedArgs.amount) {
-        const dest = parsedArgs.to ? ` → ${parsedArgs.to}` : '';
-        return `Amount: $${parsedArgs.amount}${dest}`;
+        const from = parsedArgs.from ? `${parsedArgs.from} → ` : '';
+        const dest = parsedArgs.to ? `to ${parsedArgs.to}` : '';
+        const destPart = dest ? ` ${dest}` : '';
+        return `${from}Amount: $${parsedArgs.amount}${destPart}`;
       }
 
       return 'Action details attached';
@@ -38,7 +40,7 @@ export default function ApprovalModal({ steps, onApprove, onCancel }: { steps: S
           ))}
         </ul>
         <div className="flex gap-2">
-          <button onClick={onApprove} className="btn btn-accent flex-1">Approve &amp; execute</button>
+          <button onClick={onApprove} disabled={busy} className="btn btn-accent flex-1">{busy ? 'Executing…' : 'Approve &amp; execute'}</button>
           <button onClick={onCancel} className="btn btn-ghost flex-1">Cancel</button>
         </div>
       </div>

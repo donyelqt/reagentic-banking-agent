@@ -121,9 +121,9 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
             </div>
           )}
         </div>
-        {last && last.pendingSteps.length > 0 && (
-          <ApprovalModal steps={last.pendingSteps} onApprove={onApprove} onCancel={() => setLast(null)} />
-        )}
+          {last && last.pendingSteps.length > 0 && (
+            <ApprovalModal steps={last.pendingSteps} onApprove={onApprove} onCancel={() => setLast(null)} busy={busy} />
+          )}
         {messages.length === 1 && (
           <div className="px-5 pb-4 pt-2 flex justify-center">
             <button onClick={() => handlePrompt(introChips()[0])} disabled={busy}

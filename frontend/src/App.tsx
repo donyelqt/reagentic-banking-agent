@@ -94,6 +94,7 @@ function AppShell({
 
   return (
     <div className="flex min-h-screen bg-bg text-ink">
+      <a href="#main" className="skip-link">Skip to content</a>
       <Sidebar
         isEmployee={isEmployee}
         email={email}
@@ -136,7 +137,7 @@ function AppShell({
           <Brand tone="light" />
         </div>
 
-        <main className="px-4 md:px-8 pb-16 max-w-6xl mx-auto pt-6 w-full">
+        <main id="main" className="px-4 md:px-8 pb-16 max-w-6xl mx-auto pt-6 w-full">
           <Routes>
             <Route path="/" element={<Navigate to={isEmployee ? "/agent" : "/dashboard"} replace />} />
             <Route
@@ -145,7 +146,7 @@ function AppShell({
                 isEmployee ? (
                   <Navigate to="/agent" replace />
                 ) : (
-                  <Dashboard accounts={accounts} onTransfer={() => navigate("/transfer")} />
+                  <Dashboard accounts={accounts} onTransfer={() => navigate("/transfer")} onViewAll={() => navigate("/agent")} />
                 )
               }
             />

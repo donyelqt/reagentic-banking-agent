@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react'
 import { getLedger, downloadStatementCsv, downloadStatementExcel, classifySpending } from '../api'
 import type { AccountView, CategorySpend, LedgerEntry } from '../types'
 import { useCountUp } from '../lib/useCountUp'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { CategoryChart } from './CategoryChart';
 import { SpendingTrendChart } from './SpendingTrendChart';
 
-export default function Dashboard({ accounts, onTransfer }: { accounts: AccountView[]; onTransfer: () => void }) {
+export default function Dashboard({ accounts, onTransfer, onViewAll }: { accounts: AccountView[]; onTransfer: () => void; onViewAll: () => void }) {
   const [allActivity, setAllActivity] = useState<LedgerEntry[]>([])
   const [activity, setActivity] = useState<LedgerEntry[]>([])
   const [categorySummary, setCategorySummary] = useState<CategorySpend[] | null>(null)
   const [classifyError, setClassifyError] = useState(false)
+  const [dlError, setDlError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function Dashboard({ accounts, onTransfer }: { accounts: AccountV
       </div>
 
       <div className="grid md:grid-cols-2 gap-5">
-        {accounts.map((a, i) => <AccountCard key={a.accountId} account={a} index={i} />)}
+        {accounts.map((a, i) => <AccountCard key={a.accountId} account={a} index={i} onDownloadError={setDlError} />)}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6 mt-6">
@@ -58,69 +58,37 @@ export default function Dashboard({ accounts, onTransfer }: { accounts: AccountV
         <SpendingTrendChart data={allActivity} />
       </div>
 
-      {/* Existing Cash Flow & Activity */}
-      <div className="grid lg:grid-cols-2 gap-6 mt-6">
-        <div className="card p-6 flex flex-col">
-          <div className="mb-6">
-            <h2 className="text-xl">Cash flow</h2>
-            <p className="text-sm text-muted">Income vs expenses</p>
-          </div>
-          <div className="flex-1 min-h-[300px]">
-             {loading ? <div className="grid place-items-center h-full shimmer rounded-lg" /> : <SpendingChart data={allActivity} />}
-          </div>
+      {dlError && (
+        <div className="tag-neg mt-6 rounded-xl px-4 py-2.5 flex items-center justify-between text-sm">
+          <span>{dlError}</span>
+          <button className="font-medium underline" onClick={() => setDlError(null)}>Dismiss</button>
         </div>
+      )}
 
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl">Recent activity</h2>
-            <span className="chip">Live ledger</span>
+      <div className="card p-6 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl">Recent activity</h2>
+          <div className="flex items-center gap-2">
+            <span className="chip">Latest</span>
+            <button onClick={onViewAll} className="text-sm font-medium text-accent hover:underline">View all</button>
           </div>
-          {loading ? <ActivitySkeleton /> : activity.length === 0 ? <p className="text-muted text-sm">No movements yet.</p> :
-            <ul className="divide-y divide-line">
-              {activity.map((e) => <ActivityRow key={e.entryId} e={e} />)}
-            </ul>}
         </div>
+        {loading ? <ActivitySkeleton /> : activity.length === 0 ? <p className="text-muted text-sm">No movements yet.</p> :
+          <ul className="divide-y divide-line">
+            {activity.map((e) => <ActivityRow key={e.entryId} e={e} />)}
+          </ul>}
       </div>
     </div>
   )
 }
 
-function SpendingChart({ data }: { data: LedgerEntry[] }) {
-  // Aggregate data by date
-  const agg = data.reduce((acc, cur) => {
-    // Treat createdAt as milliseconds
-    const date = new Date(cur.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    if (!acc[date]) acc[date] = { date, income: 0, expense: 0 }
-    
-    const amt = parseFloat(cur.signedAmount || '0')
-    if (amt > 0) acc[date].income += amt
-    else acc[date].expense += Math.abs(amt)
-    
-    return acc
-  }, {} as Record<string, { date: string, income: number, expense: number }>)
-  
-  // Sort by date (ascending for chart)
-  const chartData = Object.values(agg).reverse()
-  
-  if (chartData.length === 0) return <div className="grid place-items-center h-full text-muted text-sm border border-dashed border-line rounded-lg">Not enough data to display chart.</div>
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dy={10} />
-        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dx={-10} tickFormatter={(v) => `$${v}`} />
-        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
-        <Bar dataKey="income" name="Income" fill="#0CA678" radius={[4, 4, 0, 0]} maxBarSize={40} />
-        <Bar dataKey="expense" name="Expense" fill="#E5484D" radius={[4, 4, 0, 0]} maxBarSize={40} />
-      </BarChart>
-    </ResponsiveContainer>
-  )
-}
-
-function AccountCard({ account, index }: { account: AccountView; index: number }) {
+function AccountCard({ account, index, onDownloadError }: { account: AccountView; index: number; onDownloadError: (msg: string | null) => void }) {
   const num = useCountUp(parseFloat(account.balance || '0'))
   const amt = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const run = (fn: () => Promise<void>, label: string) => {
+    onDownloadError(null)
+    fn().catch(() => onDownloadError(`Couldn't download ${label}. Try again.`))
+  }
   return (
     <div className="card p-6 view-in" style={{ animationDelay: `${index * 80}ms` }}>
       <div className="flex items-center justify-between">
@@ -128,27 +96,21 @@ function AccountCard({ account, index }: { account: AccountView; index: number }
         <span className="text-xs text-muted font-mono">{account.accountId}</span>
       </div>
       <div className="mt-5 font-display text-4xl">${amt}</div>
-      <div className="mt-4 h-1.5 rounded-full bg-[#EDEBE3] overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${Math.min(100, (parseFloat(account.balance || '0') / 2000) * 100)}%`, background: 'linear-gradient(90deg,#2D43F5,#6A4BFF)' }} />
-      </div>
-      <div className="mt-4 flex items-center justify-between">
-        <span className="text-xs text-muted font-mono">{account.accountId}</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => downloadStatementCsv(account.accountId).catch(() => {})}
-            className="text-xs font-medium text-gold bg-gold/15 hover:bg-gold/25 px-3 py-1.5 rounded-full transition-colors"
-            title="Download statement as plain CSV"
-          >
-            Plain CSV
-          </button>
-          <button
-            onClick={() => downloadStatementExcel(account.accountId).catch(() => {})}
-            className="text-xs font-medium text-[#2D43F5] bg-[#2D43F5]/10 hover:bg-[#2D43F5]/20 px-3 py-1.5 rounded-full transition-colors"
-            title="Download the same statement as a styled Excel workbook"
-          >
-            Designed CSV
-          </button>
-        </div>
+      <div className="mt-6 flex items-center justify-end gap-2">
+        <button
+          onClick={() => run(() => downloadStatementCsv(account.accountId), 'CSV')}
+          className="text-xs font-medium text-[#8A6D1A] bg-gold/15 hover:bg-gold/25 px-3 py-1.5 rounded-full transition-colors"
+          title="Download statement as plain CSV"
+        >
+          CSV
+        </button>
+        <button
+          onClick={() => run(() => downloadStatementExcel(account.accountId), 'Excel')}
+          className="text-xs font-medium text-accent bg-accent/10 hover:bg-accent/20 px-3 py-1.5 rounded-full transition-colors"
+          title="Download the same statement as a styled Excel workbook"
+        >
+          Excel
+        </button>
       </div>
     </div>
   )
@@ -157,16 +119,19 @@ function AccountCard({ account, index }: { account: AccountView; index: number }
 function ActivityRow({ e }: { e: LedgerEntry }) {
   const credit = e.type === 'CREDIT' || e.type === 'OPENING'
   const label = e.type === 'OPENING' ? 'Opening balance' : e.type === 'DEBIT' ? 'Transfer out' : e.type === 'CREDIT' ? 'Transfer in' : e.type
+  const amt = parseFloat(e.signedAmount || '0')
+  const formatted = (credit ? '+' : '−') + '$' + Math.abs(amt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const date = new Date(e.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   return (
     <li className="py-3.5 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <span className={`w-9 h-9 rounded-full grid place-items-center ${credit ? 'bg-[rgba(12,166,120,.12)] text-pos' : 'bg-[rgba(229,72,77,.12)] text-neg'}`}>{credit ? '↓' : '↑'}</span>
+        <span aria-hidden="true" className={`w-9 h-9 rounded-full grid place-items-center ${credit ? 'bg-[rgba(12,166,120,.12)] text-pos' : 'bg-[rgba(229,72,77,.12)] text-neg'}`}>{credit ? '↑' : '↓'}</span>
         <div>
           <div className="text-sm font-medium">{label}</div>
-          <div className="text-xs text-muted">{e.paymentId ? `ref ${e.paymentId}` : 'ledger'}</div>
+          <div className="text-xs text-muted">{date} · {e.paymentId ? `ref ${e.paymentId}` : 'ledger'}</div>
         </div>
       </div>
-      <div className={`font-display ${credit ? 'text-pos' : 'text-neg'}`}>{e.signedAmount}</div>
+      <div className={`font-display ${credit ? 'text-pos' : 'text-neg'}`}>{formatted}</div>
     </li>
   )
 }

@@ -38,7 +38,7 @@ export default function LedgerConsole() {
   useEffect(() => {
     let cancelled = false
     getInternalAccounts()
-      .then((r: any) => {
+      .then((r) => {
         if (cancelled) return
         const list: AccountView[] = r.data ?? []
         setAccounts(list)
@@ -58,7 +58,7 @@ export default function LedgerConsole() {
     setRecon(null)
     setReconError(null)
     getInternalLedger(accountId)
-      .then((r: any) => {
+      .then((r) => {
         if (!cancelled) setEntries(r.data ?? [])
       })
       .catch(() => { if (!cancelled) setError(true) })
@@ -71,8 +71,8 @@ export default function LedgerConsole() {
     setReconciling(true)
     setReconError(null)
     try {
-      const r: any = await reconcileAccount(accountId)
-      setRecon(r?.data ?? r)
+      const r = await reconcileAccount(accountId)
+      setRecon(r.data)
     } catch (err: any) {
       let msg = "Reconciliation failed. Try again."
       try {

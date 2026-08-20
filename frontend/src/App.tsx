@@ -16,8 +16,9 @@ import { Sidebar, SidebarNav, MenuIcon } from "./components/Sidebar/Sidebar";
 type Stage = "landing" | "app";
 
 export default function App() {
-  const [stage, setStage] = useState<Stage>("landing");
-  const [token, setToken] = useState<string | null>(localStorage.getItem("jwt"));
+  const initialToken = localStorage.getItem("jwt");
+  const [stage, setStage] = useState<Stage>(initialToken ? "app" : "landing");
+  const [token, setToken] = useState<string | null>(initialToken);
   const [accounts, setAccounts] = useState<AccountView[]>([]);
   const session = sessionFromToken(token);
   const role = session?.role ?? "USER";
@@ -27,7 +28,7 @@ export default function App() {
 
   useEffect(() => {
     if (!token || stage !== "app") return;
-    getAccounts().then((r: any) => setAccounts(r.data ?? [])).catch(() => setAccounts([]));
+    getAccounts().then((r) => setAccounts(r.data ?? [])).catch(() => setAccounts([]));
   }, [token, stage]);
 
   function logout() {
@@ -39,7 +40,7 @@ export default function App() {
   }
 
   function refreshAccounts() {
-    getAccounts().then((r: any) => setAccounts(r.data ?? [])).catch(() => {});
+    getAccounts().then((r) => setAccounts(r.data ?? [])).catch(() => {});
   }
 
   if (stage === "landing") return <Landing onEnter={() => setStage("app")} />;

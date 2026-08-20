@@ -48,8 +48,8 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
   async function send(text: string, body?: any, chips?: string[]) {
     setBusy(true);
     try {
-      const json: any = await agentChat(body ?? { message: text });
-      const data: AgentResponse = json?.data ?? json;
+      const json = await agentChat(body ?? { message: text });
+      const data: AgentResponse = json;
       setLast(data);
       const reply = data?.reply?.trim();
       if (reply) setMessages((m) => [...m, { role: "agent", text: reply, chips }]);
@@ -83,7 +83,7 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
         setMessages((m) => [...m, { role: "agent", text: "I couldn't load your accounts. Try again in a moment." }]);
         return;
       }
-      const lists = await Promise.all(opts.map((a) => getLedger(a.id).then((r: any) => r.data ?? []).catch(() => [])));
+      const lists = await Promise.all(opts.map((a) => getLedger(a.id).then((r) => r.data ?? []).catch(() => [])));
       const summary = await classifySpending(lists.flat());
       setMessages((m) => [...m, { role: "agent", text: analyzeReply(summary), chips: followUpChips(false, "Analyze my spending") }]);
     } catch {

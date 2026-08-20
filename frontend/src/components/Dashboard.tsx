@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getLedger, downloadStatementCsv, downloadStatementExcel, classifySpending } from '../api'
 import type { AccountView, CategorySpend, LedgerEntry } from '../types'
 import { useCountUp } from '../lib/useCountUp'
+import { formatMoney } from '../utils'
 import { CategoryChart } from './CategoryChart';
 import { SpendingTrendChart } from './SpendingTrendChart';
 
@@ -15,7 +16,7 @@ export default function Dashboard({ accounts, onTransfer, onViewAll }: { account
 
   useEffect(() => {
     let cancelled = false
-    Promise.all(accounts.map((a) => getLedger(a.accountId).then((r: any) => r.data ?? []).catch(() => [])))
+    Promise.all(accounts.map((a) => getLedger(a.accountId).then((r) => r.data ?? []).catch(() => [])))
       .then((lists) => {
         if (cancelled) return
         const all = lists.flat().sort((a: LedgerEntry, b: LedgerEntry) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
@@ -84,7 +85,6 @@ export default function Dashboard({ accounts, onTransfer, onViewAll }: { account
 
 function AccountCard({ account, index, onDownloadError }: { account: AccountView; index: number; onDownloadError: (msg: string | null) => void }) {
   const num = useCountUp(parseFloat(account.balance || '0'))
-  const amt = num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const run = (fn: () => Promise<void>, label: string) => {
     onDownloadError(null)
     fn().catch(() => onDownloadError(`Couldn't download ${label}. Try again.`))
@@ -95,7 +95,7 @@ function AccountCard({ account, index, onDownloadError }: { account: AccountView
         <span className="chip capitalize">{account.type.toLowerCase()}</span>
         <span className="text-xs text-muted font-mono">{account.accountId}</span>
       </div>
-      <div className="mt-5 font-display text-4xl">${amt}</div>
+      <div className="mt-5 font-display text-4xl">{formatMoney(num)}</div>
       <div className="mt-6 flex items-center justify-end gap-2">
         <button
           onClick={() => run(() => downloadStatementCsv(account.accountId), 'CSV')}
@@ -120,7 +120,7 @@ function ActivityRow({ e }: { e: LedgerEntry }) {
   const credit = e.type === 'CREDIT' || e.type === 'OPENING'
   const label = e.type === 'OPENING' ? 'Opening balance' : e.type === 'DEBIT' ? 'Transfer out' : e.type === 'CREDIT' ? 'Transfer in' : e.type
   const amt = parseFloat(e.signedAmount || '0')
-  const formatted = (credit ? '+' : '−') + '$' + Math.abs(amt).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const formatted = (credit ? '+' : '−') + formatMoney(amt)
   const date = new Date(e.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   return (
     <li className="py-3.5 flex items-center justify-between">

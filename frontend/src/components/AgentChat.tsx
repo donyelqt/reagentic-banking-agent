@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { agentChat, classifySpending, getLedger } from "../api";
 import type { AccountView, AgentResponse } from "../types";
 import ApprovalModal from "./ApprovalModal";
-import { isCapabilityQuestion, capabilityReply, isAnalyzeQuestion, analyzeReply, introChips, actionChips, followUpChips } from "../lib/chatPrompts";
+import { Brand } from "./Brand";
+import { isCapabilityQuestion, capabilityReply, isAnalyzeQuestion, analyzeReply, actionChips, followUpChips } from "../lib/chatPrompts";
 
 interface Msg { role: "user" | "agent"; text: string; chips?: string[] }
 
@@ -21,21 +22,26 @@ function accountOptions(accounts?: AccountView[]) {
   return FALLBACK_ACCOUNTS;
 }
 
-const CUSTOMER_GREETING =
-  "Hello! I'm your banking agent. I can check balances, show your transactions, " +
-  "and move money between your accounts - transfers always wait for your approval. " +
-  "Try \"transfer 50 to savings\" or \"what's my balance?\".";
-
-const OPS_GREETING =
-  "Reconciliation Console - diagnose ledger breaks with root-cause evidence. " +
-  "Pick an account and ask to reconcile it, e.g. \"reconcile checking\".";
+function greetingForNow(): string {
+  const h = new Date().getHours();
+  if (h < 5) return "Good night";
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: { isEmployee: boolean; onAccountsChanged?: () => void; accounts?: AccountView[] }) {
-  const [messages, setMessages] = useState<Msg[]>([{ role: "agent", text: isEmployee ? OPS_GREETING : CUSTOMER_GREETING }]);
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [account, setAccount] = useState(accountOptions(accounts)[0].id);
   const [last, setLast] = useState<AgentResponse | null>(null);
   const [busy, setBusy] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages, busy]);
 
   function buildMessage(text: string): string {
     const t = text.trim().toLowerCase();
@@ -102,65 +108,80 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
     send("", { plan: last.plan, approval: ids }, followUpChips(isEmployee, "Approved: " + ids.join(", "))).then(() => onAccountsChanged?.());
   }
 
+  const heroTitle = isEmployee ? "Reconciliation Console" : `${greetingForNow()}, Baguio`;
+  const heroDesc = isEmployee
+    ? "Diagnose ledger breaks with root-cause evidence straight from the immutable ledger. Nothing here executes without your approval."
+    : "I'm your private banking agent. I can check balances, show transactions, and move money between your accounts — transfers always wait for your approval.";
+  const heroChips = ["What can you do?", ...actionChips(isEmployee)];
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-4xl mb-1">{isEmployee ? "Reconciliation Console" : "Your Agent"}</h1>
-      <p className="text-muted mb-4">
-        {isEmployee
-          ? "Internal ops tool - employee only. Diagnose a ledger break and propose a corrective entry."
-          : "Ask in plain language. Balances and history are yours alone; risky moves wait for your approval."}
-      </p>
+    <div className="flex flex-col min-h-0 h-[calc(100dvh_-_3.5rem)] md:h-[100dvh]">
+      <h1 className="sr-only">{isEmployee ? "Reconciliation Console" : "Your Agent"}</h1>
       {isEmployee && (
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 px-4 md:px-8 py-3 border-b border-line bg-surface/40">
           <label className="label" htmlFor="agent-account">Account</label>
           <select id="agent-account" className="field !w-auto" value={account} onChange={(e) => setAccount(e.target.value)}>
             {accountOptions(accounts).map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
           </select>
         </div>
       )}
-      <div className="glass relative rounded-[26px] h-[70vh] flex flex-col overflow-hidden shadow-card">
-        <div className="flex-1 overflow-auto p-5 space-y-4">
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} bubble-in`}>
-              {m.role === "user" ? (
-                <div className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-[#2D43F5] text-white shadow-soft rounded-br-md">{m.text}</div>
-              ) : (
-                <div className="max-w-[80%]">
-                  <div className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-white border border-line rounded-bl-md">{m.text}</div>
-                  {m.chips && m.chips.length > 0 && (
-                    <div className="mt-2.5 flex flex-wrap gap-2">
-                      {m.chips.map((c) => (
-                        <button key={c} onClick={() => handlePrompt(c)} disabled={busy}
-                          className="text-xs px-3.5 py-1.5 rounded-full border border-accent/35 bg-white text-ink shadow-soft hover:bg-accent hover:text-white hover:border-accent hover:-translate-y-0.5 transition disabled:opacity-50">
-                          {c}
-                        </button>
-                      ))}
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        <div ref={scrollRef} className="flex-1 overflow-auto px-4 md:px-8 py-6">
+          {messages.length === 0 ? (
+            <div className="h-full grid place-items-center">
+              <div className="w-full max-w-md text-center">
+                <div className="flex justify-center">
+                  <div className="hero-brand"><Brand tone="light" /></div>
+                </div>
+                <p className="font-display text-2xl mt-5">{heroTitle}</p>
+                <p className="text-muted text-sm leading-relaxed mt-2">{heroDesc}</p>
+                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                  {heroChips.map((c) => (
+                    <button key={c} onClick={() => handlePrompt(c)} disabled={busy}
+                      className="text-xs px-3.5 py-1.5 rounded-full border border-accent/35 bg-white text-ink shadow-soft hover:bg-accent hover:text-white hover:border-accent hover:-translate-y-0.5 transition disabled:opacity-50">
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 max-w-3xl mx-auto w-full">
+              {messages.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} bubble-in`}>
+                  {m.role === "user" ? (
+                    <div className="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-[#2D43F5] text-white shadow-soft rounded-br-md">{m.text}</div>
+                  ) : (
+                    <div className="max-w-[80%]">
+                      <div className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-white border border-line rounded-bl-md">{m.text}</div>
+                      {m.chips && m.chips.length > 0 && (
+                        <div className="mt-2.5 flex flex-wrap gap-2">
+                          {m.chips.map((c) => (
+                            <button key={c} onClick={() => handlePrompt(c)} disabled={busy}
+                              className="text-xs px-3.5 py-1.5 rounded-full border border-accent/35 bg-white text-ink shadow-soft hover:bg-accent hover:text-white hover:border-accent hover:-translate-y-0.5 transition disabled:opacity-50">
+                              {c}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+              ))}
+              {busy && (
+                <div className="flex justify-start bubble-in">
+                  <div className="bg-white border border-line rounded-2xl rounded-bl-md px-4 py-3">
+                    <span className="w-4 h-4 border-2 border-ink/20 border-t-accent rounded-full spin inline-block" />
+                  </div>
+                </div>
               )}
-            </div>
-          ))}
-          {busy && (
-            <div className="flex justify-start bubble-in">
-              <div className="bg-white border border-line rounded-2xl rounded-bl-md px-4 py-3">
-                <span className="w-4 h-4 border-2 border-ink/20 border-t-accent rounded-full spin inline-block" />
-              </div>
             </div>
           )}
         </div>
-          {last && last.pendingSteps.length > 0 && (
-            <ApprovalModal steps={last.pendingSteps} accounts={accounts?.length ? accounts : undefined} onApprove={onApprove} onCancel={() => setLast(null)} busy={busy} />
-          )}
-        {messages.length === 1 && (
-          <div className="px-5 pb-4 pt-2 flex justify-center">
-            <button onClick={() => handlePrompt(introChips()[0])} disabled={busy}
-              className="px-5 py-2 rounded-full border-2 border-dashed border-accent/50 text-accent font-medium text-sm shadow-soft hover:bg-accent hover:text-white hover:border-accent hover:border-solid hover:-translate-y-0.5 transition cursor-pointer disabled:opacity-50">
-              {introChips()[0]}
-            </button>
-          </div>
+        {last && last.pendingSteps.length > 0 && (
+          <ApprovalModal steps={last.pendingSteps} accounts={accounts?.length ? accounts : undefined} onApprove={onApprove} onCancel={() => setLast(null)} busy={busy} />
         )}
-        <form onSubmit={onSend} className="flex gap-2 p-3 border-t border-line bg-surface/60">
+        <form onSubmit={onSend} className="flex gap-2 p-3 md:p-4 border-t border-line bg-surface/60">
           <input className="field" value={input} onChange={(e) => setInput(e.target.value)} placeholder={isEmployee ? "Diagnose an account..." : "Ask your agent..."} />
           <button className="btn btn-accent px-5" disabled={busy}>{busy ? "..." : "Send"}</button>
         </form>

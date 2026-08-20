@@ -139,7 +139,14 @@ function AppShell({
           <Brand tone="light" />
         </div>
 
-        <main id="main" className="px-4 md:px-8 pb-16 max-w-6xl mx-auto pt-6 w-full">
+        <main
+          id="main"
+          className={
+            onAgent
+              ? "flex-1 flex flex-col min-h-0 w-full"
+              : "px-4 md:px-8 pb-16 max-w-6xl mx-auto pt-6 w-full"
+          }
+        >
           <Routes>
             <Route path="/" element={<Navigate to={isEmployee ? "/agent" : "/dashboard"} replace />} />
             <Route

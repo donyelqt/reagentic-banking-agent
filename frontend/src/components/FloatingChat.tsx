@@ -80,7 +80,7 @@ export default function FloatingChat({ accounts, onExpand }: { accounts: Account
   return (
     <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
       {isOpen && (
-        <div className="mb-4 w-[360px] max-w-[calc(100vw-48px)] h-[500px] max-h-[70vh] glass relative rounded-[26px] shadow-card flex flex-col overflow-hidden view-in">
+        <div className="mb-4 w-[360px] max-w-[calc(100vw_-_48px)] h-[500px] max-h-[70vh] glass relative rounded-[26px] shadow-card flex flex-col overflow-hidden view-in">
           <div className="p-4 border-b border-line bg-surface/60 flex items-center justify-between">
             <h3 className="font-medium text-ink flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-pos animate-pulse" /> Banking Agent

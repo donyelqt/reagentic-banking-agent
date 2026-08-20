@@ -79,4 +79,4 @@ One system, two roles (see `docs/ideas/two-role-agent-access-model.md`):
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/deployment.md`](docs/deployment.md)
 - [`docs/demo-runbook.md`](docs/demo-runbook.md)
-- [`infra/docs/adrs/`](infra/docs/adrs/) — architecture decision records (ADR-0001 repo topology, ADR-0006 CI/CD, ADR-0007 Spring AI + custom agent harness)
+- [`infra/docs/adrs/`](infra/docs/adrs/) — architecture decision records (ADR-0001 repo topology, ADR-0006 CI/CD, ADR-0007 Spring AI + custom agent harness, ADR-0008 demo deployment via Cloudflare Tunnel)

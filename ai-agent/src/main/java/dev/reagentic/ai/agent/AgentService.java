@@ -10,25 +10,53 @@ public class AgentService {
 
     private final Planner planner;
     private final Executor executor;
+    private final PendingApprovalStore approvalStore;
 
-    public AgentService(Planner planner, Executor executor) {
+    public AgentService(Planner planner, Executor executor, PendingApprovalStore approvalStore) {
         this.planner = planner;
         this.executor = executor;
+        this.approvalStore = approvalStore;
     }
 
-    public AgentResponse chat(ChatRequest req, String token, String role) {
+    /**
+     * Approval is server-enforced: the plan is always produced server-side (from the
+     * caller's message), and if it contains steps that require approval the plan is
+     * persisted keyed by a server-issued approvalId. An approval echo may only
+     * reference a stored session owned by the same caller; the client decides WHETHER
+     * to approve a step, never WHAT gets executed. A client-supplied plan is never
+     * trusted for execution.
+     */
+    public AgentResponse chat(ChatRequest req, String token, String role, String subject) {
         Plan plan;
-        List<String> approved;
-        if (req.plan() != null && !req.plan().isEmpty()) {
-            plan = new Plan(req.plan());
-            approved = req.approval() == null ? List.of() : req.approval();
+        List<String> approved = List.of();
+        String approvalId = null;
+        boolean resumingApproval = req.approvalId() != null && !req.approvalId().isBlank();
+
+        if (resumingApproval) {
+            PendingApprovalStore.Resolved resolved = approvalStore.resolve(req.approvalId(), subject);
+            plan = resolved.plan();
+            List<String> allowed = resolved.pendingStepIds();
+            approved = req.approval() == null ? List.of()
+                    : req.approval().stream().filter(allowed::contains).toList();
+            approvalId = req.approvalId();
         } else {
+            if (req.message() == null || req.message().isBlank()) {
+                throw new ApprovalException(ApprovalException.Kind.INVALID,
+                        "a plan requires a message, or an approval echo requires an approvalId");
+            }
             plan = planner.plan(req.message(), req.history());
-            approved = List.of();
+            List<Step> needingApproval = plan.steps().stream()
+                    .filter(s -> s.confirmationRequired() || "transferFunds".equals(s.tool()))
+                    .toList();
+            if (!needingApproval.isEmpty()) {
+                approvalId = approvalStore.put(plan, subject,
+                        needingApproval.stream().map(Step::stepId).toList());
+            }
         }
+
         Executor.ExecResult exec = executor.execute(plan, approved, token, role);
         String reply = buildReply(plan, exec, req.message());
-        return new AgentResponse(plan.steps(), exec.results(), exec.pending(), reply);
+        return new AgentResponse(plan.steps(), exec.results(), exec.pending(), approvalId, reply);
     }
 
     public Map<String, Object> reconcile(String accountId, String token, String role) {

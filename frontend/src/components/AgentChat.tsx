@@ -7,19 +7,12 @@ import { isCapabilityQuestion, capabilityReply, isAnalyzeQuestion, analyzeReply,
 
 interface Msg { role: "user" | "agent"; text: string; chips?: string[] }
 
-const FALLBACK_ACCOUNTS = [
-  { id: "acc-checking-0001", label: "Checking (acc-checking-0001)" },
-  { id: "acc-savings-0002", label: "Savings (acc-savings-0002)" }
-];
-
 function accountOptions(accounts?: AccountView[]) {
-  if (accounts && accounts.length > 0) {
-    return accounts.map((a) => ({
-      id: a.accountId,
-      label: `${a.type.charAt(0).toUpperCase() + a.type.slice(1).toLowerCase()} (${a.accountId})`
-    }));
-  }
-  return FALLBACK_ACCOUNTS;
+  if (!accounts || accounts.length === 0) return [];
+  return accounts.map((a) => ({
+    id: a.accountId,
+    label: `${a.type.charAt(0).toUpperCase() + a.type.slice(1).toLowerCase()} (${a.accountId})`
+  }));
 }
 
 function greetingForNow(): string {
@@ -33,7 +26,7 @@ function greetingForNow(): string {
 export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: { isEmployee: boolean; onAccountsChanged?: () => void; accounts?: AccountView[] }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
-  const [account, setAccount] = useState(accountOptions(accounts)[0].id);
+  const [account, setAccount] = useState(accountOptions(accounts)[0]?.id ?? "");
   const [last, setLast] = useState<AgentResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -86,6 +79,10 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
     setBusy(true);
     try {
       const opts = accountOptions(accounts);
+      if (opts.length === 0) {
+        setMessages((m) => [...m, { role: "agent", text: "I couldn't load your accounts. Try again in a moment." }]);
+        return;
+      }
       const lists = await Promise.all(opts.map((a) => getLedger(a.id).then((r: any) => r.data ?? []).catch(() => [])));
       const summary = await classifySpending(lists.flat());
       setMessages((m) => [...m, { role: "agent", text: analyzeReply(summary), chips: followUpChips(false, "Analyze my spending") }]);
@@ -103,9 +100,14 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
 
   function onApprove() {
     if (!last) return;
+    if (!last.approvalId) {
+      setMessages((m) => [...m, { role: "agent", text: "This approval session expired. Please ask again and re-approve." }]);
+      setLast(null);
+      return;
+    }
     const ids = last.pendingSteps.map((s) => s.stepId);
     setMessages((m) => [...m, { role: "user", text: "Approved: " + ids.join(", ") }]);
-    send("", { plan: last.plan, approval: ids }, followUpChips(isEmployee, "Approved: " + ids.join(", "))).then(() => onAccountsChanged?.());
+    send("", { approvalId: last.approvalId, approval: ids }, followUpChips(isEmployee, "Approved: " + ids.join(", "))).then(() => onAccountsChanged?.());
   }
 
   const heroTitle = isEmployee ? "Reconciliation Console" : `${greetingForNow()}, Baguio`;
@@ -120,8 +122,12 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
       {isEmployee && (
         <div className="flex items-center gap-3 px-4 md:px-8 py-3 border-b border-line bg-surface/40">
           <label className="label" htmlFor="agent-account">Account</label>
-          <select id="agent-account" className="field !w-auto" value={account} onChange={(e) => setAccount(e.target.value)}>
-            {accountOptions(accounts).map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+          <select id="agent-account" className="field !w-auto" value={account} onChange={(e) => setAccount(e.target.value)} disabled={accountOptions(accounts).length === 0}>
+            {accountOptions(accounts).length === 0 ? (
+              <option value="">Accounts unavailable</option>
+            ) : (
+              accountOptions(accounts).map((a) => <option key={a.id} value={a.id}>{a.label}</option>)
+            )}
           </select>
         </div>
       )}

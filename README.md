@@ -16,10 +16,13 @@ backend**. Balances are numbers in PostgreSQL — no real money.
 > repository wins. Verify any claim with the
 > [Verify commands](#verify-what-ci-runs) rather than a copy.
 
-> **No mock data:** the frontend hardcodes nothing — every balance,
-> transaction, ledger row, and reconcile result is **fetched live** from the
-> backend (Postgres + Kafka) over authenticated APIs. The dataset is
-> **demo-seeded** in Postgres (`DataSeeder`), not hardcoded in the UI.
+> **No mock data in the app:** inside the authenticated product, no balance,
+> transaction, ledger row, or reconcile result is hardcoded — every one is
+> **fetched live** from the backend (Postgres + Kafka) over authenticated APIs,
+> and failure states render as empty/error UI, never fabricated figures. The
+> dataset is **demo-seeded** in Postgres (`DataSeeder` + Flyway), not hardcoded
+> in the UI. (The public marketing/landing pages show clearly-labeled
+> illustrative figures — "Fictional balances for demonstration".)
 
 ## Stack
 - **Backend + agent:** Java 17 / Spring Boot 3.5.16 (Maven multi-module monorepo, JDK 17 pinned in CI)
@@ -64,7 +67,7 @@ deliberately does not (yet).
   across reloads — a known XSS trade-off, tracked under gaps below.
 
 **Engineering (CI-verified):**
-- 115 unit tests across the Maven reactor, gated by GitHub Actions CI on every
+- 118 unit tests across the Maven reactor, gated by GitHub Actions CI on every
   PR/push to `main`/`donieledev` (compile, tests, frontend typecheck + build,
   production dependency audit) — see ADR-0006.
 - Decisions are recorded, not recalled: ADRs in `infra/docs/adrs/` document
@@ -112,7 +115,7 @@ Each service reads env vars (`JWT_SECRET`, `*_DB_URL`, `KAFKA_BOOTSTRAP_SERVERS`
 
 ## Verify (what CI runs)
 ```bash
-.\mvnw -B test                                    # backend: 115 tests, 8 modules (JDK 17)
+.\mvnw -B test                                    # backend: 118 tests, 8 modules (JDK 17)
 cd frontend && npm ci && npm run typecheck && npm run build   # frontend gates
 ```
 The same gates run in GitHub Actions on every PR/push (see ADR-0006).

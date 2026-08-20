@@ -157,4 +157,6 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,te
 .brand-agentic { font-weight: 600; }
 .brand--dark  .brand-word { color: #fff; }
 .brand--light .brand-word { color: var(--ink, #0b1220); }
+.hero-brand .brand-mark { width: 3.4rem; height: 2.3rem; }
+.hero-brand .brand-word { font-size: 1.7rem; }
 @media (prefers-reduced-motion: reduce) { .bm-echo { animation: none; opacity: .3; } }

@@ -78,3 +78,34 @@ export interface ReconcileResult {
   evidenceCount?: number
   evidence?: ReconcileEvidence[]
 }
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
+export interface LoginResponse {
+  token?: string;
+  data?: { token?: string };
+}
+
+export interface TransferResponse {
+  success?: boolean;
+  data?: { status?: string; reason?: string; paymentId?: string };
+  status?: string;
+  reason?: string;
+}
+
+export interface ClassifySummaryResponse {
+  summary?: Array<{ category: string; total: string | number; count?: number }>;
+  data?: {
+    summary?: Array<{ category: string; total: string | number; count?: number }>;
+  };
+}
+
+export interface ClassifyTransactionsResponse {
+  transactions?: Array<{ category?: string }>;
+  data?: {
+    transactions?: Array<{ category?: string }>;
+  };
+}

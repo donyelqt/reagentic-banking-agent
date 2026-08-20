@@ -1,8 +1,8 @@
-import type { AccountView, AgentResponse, CategorySpend, ChatRequest, LedgerEntry, ReconcileResult } from "./types";
+import type { AccountView, AgentResponse, ApiResponse, CategorySpend, ChatRequest, ClassifySummaryResponse, ClassifyTransactionsResponse, LedgerEntry, LoginResponse, ReconcileResult, TransferResponse } from "./types";
 
 const API = import.meta.env.VITE_GATEWAY_URL || "";
 
-async function req<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
+async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("jwt");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -25,7 +25,7 @@ async function req<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
 }
 
 export async function login(username: string, password: string): Promise<string> {
-  const json = await req("/api/auth/login", {
+  const json = await req<LoginResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({ email: username, password })
   });
@@ -35,26 +35,26 @@ export async function login(username: string, password: string): Promise<string>
   return token;
 }
 
-export const getAccounts = () => req<{ success: boolean; data: AccountView[] }>("/api/accounts");
+export const getAccounts = () => req<ApiResponse<AccountView[]>>("/api/accounts");
 
 export const transfer = (body: {
   sourceAccountId: string;
   destinationAccountId: string;
   amount: string;
   idempotencyKey: string;
-}) => req("/api/payments/transfer", { method: "POST", body: JSON.stringify(body) });
+}) => req<TransferResponse>("/api/payments/transfer", { method: "POST", body: JSON.stringify(body) });
 
 export const getLedger = (accountId: string) =>
-  req<{ success: boolean; data: any[] }>("/api/ledger/" + accountId);
+  req<ApiResponse<LedgerEntry[]>>("/api/ledger/" + accountId);
 
 export const getInternalLedger = (accountId: string) =>
-  req<{ success: boolean; data: LedgerEntry[] }>("/api/ledger/internal/" + accountId);
+  req<ApiResponse<LedgerEntry[]>>("/api/ledger/internal/" + accountId);
 
 export const getInternalAccounts = () =>
-  req<{ success: boolean; data: AccountView[] }>("/api/accounts/internal");
+  req<ApiResponse<AccountView[]>>("/api/accounts/internal");
 
 export const reconcileAccount = (accountId: string) =>
-  req<{ success: boolean; data: ReconcileResult }>("/api/agent/reconcile/" + accountId);
+  req<ApiResponse<ReconcileResult>>("/api/agent/reconcile/" + accountId);
 
 async function downloadFile(path: string, filename: string): Promise<void> {
   const token = localStorage.getItem("jwt");
@@ -97,14 +97,14 @@ export async function classifySpending(entries: LedgerEntry[]): Promise<Category
 
   const merged = new Map<string, { total: number; count: number }>();
   for (let i = 0; i < items.length; i += CLASSIFY_BATCH) {
-    const json: any = await req("/api/agent/classify", {
+    const json = await req<ClassifySummaryResponse>("/api/agent/classify", {
       method: "POST",
       body: JSON.stringify({ transactions: items.slice(i, i + CLASSIFY_BATCH) })
     });
-    const data = json?.data ?? json;
-    for (const t of data?.summary ?? []) {
+    const summary = json?.data?.summary ?? json?.summary ?? [];
+    for (const t of summary) {
       const cur = merged.get(t.category) ?? { total: 0, count: 0 };
-      cur.total += Math.abs(parseFloat(t.total) || 0);
+      cur.total += Math.abs(Number(t.total) || 0);
       cur.count += t.count ?? 0;
       merged.set(t.category, cur);
     }
@@ -130,14 +130,13 @@ export async function classifyEntries(entries: LedgerEntry[]): Promise<Map<numbe
   for (let i = 0; i < spend.length; i += CLASSIFY_BATCH) {
     const batch = spend.slice(i, i + CLASSIFY_BATCH);
     try {
-      const json: any = await req("/api/agent/classify", {
+      const json = await req<ClassifyTransactionsResponse>("/api/agent/classify", {
         method: "POST",
         body: JSON.stringify({
           transactions: batch.map((e) => ({ description: e.description, amount: e.signedAmount }))
         })
       });
-      const data = json?.data ?? json;
-      const items: { category?: string }[] = data?.transactions ?? [];
+      const items = json?.data?.transactions ?? json?.transactions ?? [];
       if (items.length !== batch.length) continue;
       batch.forEach((e, idx) => {
         const category = items[idx]?.category;

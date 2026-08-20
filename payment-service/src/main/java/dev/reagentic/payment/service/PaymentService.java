@@ -4,11 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.reagentic.common.events.PaymentCompletedEvent;
 import dev.reagentic.common.events.PaymentFailedEvent;
 import dev.reagentic.common.money.Money;
+import dev.reagentic.common.security.JwtUtil;
 import dev.reagentic.payment.domain.Outbox;
 import dev.reagentic.payment.domain.Payment;
 import dev.reagentic.payment.domain.PaymentStatus;
 import dev.reagentic.payment.repository.OutboxRepository;
 import dev.reagentic.payment.repository.PaymentRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -22,6 +24,12 @@ public class PaymentService {
     private final OutboxRepository outboxRepository;
     private final RestClient accountClient;
     private final ObjectMapper objectMapper;
+
+    @Value("${SERVICE_TOKEN:}")
+    private String serviceToken;
+
+    @Value("${JWT_SECRET}")
+    private String jwtSecret;
 
     public PaymentService(PaymentRepository paymentRepository, OutboxRepository outboxRepository,
                           RestClient accountClient, ObjectMapper objectMapper) {
@@ -61,8 +69,8 @@ public class PaymentService {
         } catch (Exception e) {
             payment.fail("debit failed: " + e.getMessage());
             paymentRepository.save(payment);
-            writeFailedOutbox(payment, amount, "debit failed: " + e.getMessage(), transferKey);
-            throw new PaymentFailedException(payment.getReason());
+            writeFailedOutbox(payment, amount, payment.getReason(), transferKey, false);
+            return payment;
         }
 
         try {
@@ -76,8 +84,8 @@ public class PaymentService {
             }
             payment.fail("credit failed, compensated: " + e.getMessage());
             paymentRepository.save(payment);
-            writeFailedOutbox(payment, amount, payment.getReason(), transferKey);
-            throw new PaymentFailedException(payment.getReason());
+            writeFailedOutbox(payment, amount, payment.getReason(), transferKey, true);
+            return payment;
         }
 
         payment.complete();
@@ -87,9 +95,20 @@ public class PaymentService {
     }
 
     private void callAccount(String path, String accountId, Money amount, String idempotencyKey, String userToken) {
+        String subject = "";
+        try {
+            String raw = JwtUtil.bearer(userToken);
+            if (raw != null && !raw.isBlank()) {
+                subject = JwtUtil.verify(jwtSecret, raw).getSubject();
+            }
+        } catch (Exception e) {
+            // fall back to empty subject; account-service will reject the call
+        }
         var response = accountClient.post()
                 .uri(path)
                 .header("Authorization", userToken)
+                .header("X-Service-Token", serviceToken)
+                .header("X-User-Subject", subject)
                 .body(new AccountMutateRequest(accountId, amount.asString(), idempotencyKey))
                 .retrieve()
                 .toBodilessEntity();
@@ -110,11 +129,11 @@ public class PaymentService {
         }
     }
 
-    private void writeFailedOutbox(Payment p, Money amount, String reason, String transferKey) {
+    private void writeFailedOutbox(Payment p, Money amount, String reason, String transferKey, boolean debitApplied) {
         try {
             PaymentFailedEvent event = new PaymentFailedEvent(
                     p.getPaymentId(), p.getSourceAccountId(), amount,
-                    p.getCurrency(), reason, transferKey, System.currentTimeMillis());
+                    p.getCurrency(), reason, transferKey, debitApplied, System.currentTimeMillis());
             outboxRepository.save(new Outbox(p.getPaymentId(), "PaymentFailed",
                     objectMapper.writeValueAsString(event)));
         } catch (Exception e) {

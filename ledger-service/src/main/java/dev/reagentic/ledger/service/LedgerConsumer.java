@@ -37,6 +37,7 @@ public class LedgerConsumer {
             }
         } catch (Exception e) {
             log.error("Ledger failed to process event payload: {}", e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 }

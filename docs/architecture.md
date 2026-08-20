@@ -33,16 +33,28 @@ cross-account read, even if the planner proposes it. The customer-facing
 `/api/ledger/{accountId}` is ownership-scoped via a delegated check against
 account-service (other accounts → 404).
 
+Internal **mutates** (`debit`/`credit`) are the only endpoints that may run under
+a user-context **service** principal: `payment-service` authenticates with a
+shared secret (`X-Service-Token` == `SERVICE_TOKEN`, both wired from the
+environment, never logged) and forwards the caller's subject
+(`X-User-Subject`) so `account-service` still enforces ownership. Anything else
+under `/api/accounts/internal/**` remains EMPLOYEE-only.
+
 ## Data flow — a transfer
 1. `payment-service` runs the saga: `debit(source)` → `credit(dest)`, each with a
    **distinct** `idempotencyKey`; on credit failure it compensates (credits
    source back).
 2. On success it writes a `PaymentCompleted` outbox row (same local DB tx),
    relayed to Kafka topic `payment-events` (idempotent, acked after send).
-3. `ledger-service` consumes and appends `source -amount` + `dest +amount`
+3. On failure the FAILED payment and a `PaymentFailed` outbox row commit in the
+   same local DB tx (nothing is rolled back) and the API returns 409. The event
+   carries `debitApplied` so the ledger only records the
+   `DEBIT_FAILED`/`COMPENSATE` pair when the debit had actually moved money; a
+   rejected debit (e.g. insufficient funds) records nothing.
+4. `ledger-service` consumes and appends `source -amount` + `dest +amount`
    (idempotent by `paymentId`). `notification-service` consumes and records a
    confirmation.
-4. Opening ledger entries are Flyway-seeded from `DemoConstants`, so the
+5. Opening ledger entries are Flyway-seeded from `DemoConstants`, so the
    reconciliation invariant holds at t0 with no Kafka dependency.
 
 ## Money & consistency

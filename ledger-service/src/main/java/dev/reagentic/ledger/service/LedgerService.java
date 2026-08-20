@@ -49,12 +49,16 @@ public class LedgerService {
             log.warn("LEDGER FAULT INJECTED: skipping append for payment {}", e.paymentId());
             return;
         }
-        append(e.sourceAccountId(), e.paymentId(), "DEBIT_FAILED", e.amount().negate());
-        append(e.sourceAccountId(), e.paymentId(), "COMPENSATE", e.amount());
+        if (e.debitApplied()) {
+            append(e.sourceAccountId(), e.paymentId(), "DEBIT_FAILED", e.amount().negate());
+            append(e.sourceAccountId(), e.paymentId(), "COMPENSATE", e.amount());
+        } else {
+            log.info("Payment {} failed before applying ({}); nothing to record in ledger", e.paymentId(), e.reason());
+        }
     }
 
     private void append(String accountId, String paymentId, String type, Money signed) {
-        LedgerEntry last = repository.findTopByAccountIdOrderByCreatedAtDesc(accountId).orElse(null);
+        LedgerEntry last = repository.findTopByAccountIdOrderByEntryIdDesc(accountId).orElse(null);
         BigDecimal prev = last == null ? BigDecimal.ZERO : last.getBalanceAfter();
         BigDecimal balanceAfter = prev.add(signed.value());
         repository.save(new LedgerEntry(accountId, paymentId, type, signed.value(), balanceAfter));

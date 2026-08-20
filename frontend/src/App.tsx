@@ -43,7 +43,11 @@ export default function App() {
   }
 
   if (stage === "landing") return <Landing onEnter={() => setStage("app")} />;
-  if (!token) return <Login onLogin={(t) => { localStorage.setItem("jwt", t); setToken(t); }} />;
+  if (!token) return <Login onLogin={(t) => {
+    localStorage.setItem("jwt", t);
+    window.history.replaceState(null, "", "/");
+    setToken(t);
+  }} />;
 
   return (
     <BrowserRouter>

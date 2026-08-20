@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * Exact-money value object. Money is ALWAYS BigDecimal scale 2, HALF_UP.
@@ -16,6 +17,12 @@ public final class Money {
 
     public static final int SCALE = 2;
     public static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
+
+    /** Plain non-negative decimal with at most 2 fractional digits. Rejects
+     * scientific notation ("1e2"), signs ("+5", "-5"), grouping ("1,000"),
+     * and anything with more than 2 decimal places. Matches the strict money
+     * grammar enforced at every API boundary. */
+    private static final Pattern PLAIN_DECIMAL = Pattern.compile("\\d+(\\.\\d{1,2})?");
 
     private final BigDecimal amount;
 
@@ -28,9 +35,14 @@ public final class Money {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException("Money value is required");
         }
+        String trimmed = value.trim();
+        if (!PLAIN_DECIMAL.matcher(trimmed).matches()) {
+            throw new IllegalArgumentException(
+                    "Invalid money value (expected a non-negative number with at most 2 decimal places): " + value);
+        }
         BigDecimal bd;
         try {
-            bd = new BigDecimal(value.trim());
+            bd = new BigDecimal(trimmed);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Invalid money value: " + value, e);
         }

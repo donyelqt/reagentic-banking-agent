@@ -1,5 +1,6 @@
 package dev.reagentic.payment.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.reagentic.common.events.PaymentCompletedEvent;
 import dev.reagentic.common.events.PaymentFailedEvent;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Optional;
 
@@ -46,6 +48,15 @@ public class PaymentService {
      */
     @Transactional
     public Payment transfer(String userToken, String source, String dest, Money amount, String transferKey) {
+        if (source == null || dest == null || source.isBlank() || dest.isBlank()) {
+            throw new IllegalArgumentException("Source and destination accounts are required");
+        }
+        if (source.equals(dest)) {
+            throw new IllegalArgumentException("Source and destination accounts must be different");
+        }
+        if (amount == null || amount.isZero()) {
+            throw new IllegalArgumentException("Transfer amount must be greater than zero");
+        }
         Optional<Payment> existing = paymentRepository.findById(transferKey);
         if (existing.isPresent()) {
             Payment p = existing.get();
@@ -104,17 +115,41 @@ public class PaymentService {
         } catch (Exception e) {
             // fall back to empty subject; account-service will reject the call
         }
-        var response = accountClient.post()
-                .uri(path)
-                .header("Authorization", userToken)
-                .header("X-Service-Token", serviceToken)
-                .header("X-User-Subject", subject)
-                .body(new AccountMutateRequest(accountId, amount.asString(), idempotencyKey))
-                .retrieve()
-                .toBodilessEntity();
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new AccountCallException("account call " + path + " failed: " + response.getStatusCode());
+        try {
+            var response = accountClient.post()
+                    .uri(path)
+                    .header("Authorization", userToken)
+                    .header("X-Service-Token", serviceToken)
+                    .header("X-User-Subject", subject)
+                    .body(new AccountMutateRequest(accountId, amount.asString(), idempotencyKey))
+                    .retrieve()
+                    .toBodilessEntity();
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new AccountCallException("account call " + path + " failed: " + response.getStatusCode());
+            }
+        } catch (RestClientResponseException e) {
+            throw new AccountCallException(extractError(e.getResponseBodyAsString()));
         }
+    }
+
+    /** Extracts the clean message field from a backend error envelope instead of
+     * embedding the raw JSON (which nests quotes and escapes into user-visible
+     * errors) into the payment failure reason. */
+    private String extractError(String body) {
+        if (body == null || body.isBlank()) {
+            return "no response body";
+        }
+        try {
+            JsonNode node = objectMapper.readTree(body);
+            if (node.hasNonNull("message")) {
+                return node.get("message").asText();
+            }
+            if (node.hasNonNull("error")) {
+                return node.get("error").asText();
+            }
+        } catch (Exception ignored) {
+        }
+        return body;
     }
 
     private void writeCompletedOutbox(Payment p, Money amount, String transferKey) {

@@ -69,7 +69,7 @@ deliberately does not (yet).
   across reloads — a known XSS trade-off, tracked under gaps below.
 
 **Engineering (CI-verified):**
-- 118 unit tests across the Maven reactor, gated by GitHub Actions CI on every
+- 130 unit tests across the Maven reactor, gated by GitHub Actions CI on every
   PR/push to `main`/`donieledev` (compile, tests, frontend typecheck + build,
   production dependency audit) — see ADR-0006.
 - Decisions are recorded, not recalled: ADRs in `infra/docs/adrs/` document
@@ -117,7 +117,7 @@ Each service reads env vars (`JWT_SECRET`, `*_DB_URL`, `KAFKA_BOOTSTRAP_SERVERS`
 
 ## Verify (what CI runs)
 ```bash
-.\mvnw -B test                                    # backend: 118 tests, 8 modules (JDK 17)
+.\mvnw -B test                                    # backend: 130 tests, 8 modules (JDK 17)
 cd frontend && npm ci && npm run typecheck && npm run build   # frontend gates
 ```
 The same gates run in GitHub Actions on every PR/push (see ADR-0006).

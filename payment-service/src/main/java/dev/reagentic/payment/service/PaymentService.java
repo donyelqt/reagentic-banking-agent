@@ -20,10 +20,15 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class PaymentService {
 
     private static final long SERVICE_TOKEN_TTL_MILLIS = 60_000L;
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
     private final PaymentRepository paymentRepository;
     private final OutboxRepository outboxRepository;
@@ -85,7 +90,7 @@ public class PaymentService {
         } catch (Exception e) {
             payment.fail("debit failed: " + e.getMessage());
             paymentRepository.save(payment);
-            writeFailedOutbox(payment, amount, payment.getReason(), transferKey, false);
+            writeFailedOutbox(payment, amount, payment.getReason(), transferKey, false, false);
             return payment;
         }
 
@@ -93,14 +98,22 @@ public class PaymentService {
             callAccount("/api/accounts/internal/credit", dest, amount, creditKey, userToken);
         } catch (Exception e) {
             // Compensate the already-applied debit by crediting the source back.
+            boolean compensated;
             try {
                 callAccount("/api/accounts/internal/credit", source, amount, compensateKey, userToken);
+                compensated = true;
             } catch (Exception ce) {
-                // best-effort compensation failed; still record the failure
+                // Compensation failed: the source stays debited. Record the truth so
+                // the ledger reflects the debit instead of falsely netting to zero.
+                log.error("Compensation failed for payment {} (debit on {} stays applied): {}",
+                        transferKey, source, ce.getMessage());
+                compensated = false;
             }
-            payment.fail("credit failed, compensated: " + e.getMessage());
+            payment.fail(compensated
+                    ? "credit failed, debit compensated"
+                    : "credit failed, compensation failed: " + e.getMessage());
             paymentRepository.save(payment);
-            writeFailedOutbox(payment, amount, payment.getReason(), transferKey, true);
+            writeFailedOutbox(payment, amount, payment.getReason(), transferKey, true, compensated);
             return payment;
         }
 
@@ -174,11 +187,12 @@ public class PaymentService {
         }
     }
 
-    private void writeFailedOutbox(Payment p, Money amount, String reason, String transferKey, boolean debitApplied) {
+    private void writeFailedOutbox(Payment p, Money amount, String reason, String transferKey,
+                                   boolean debitApplied, boolean compensateApplied) {
         try {
             PaymentFailedEvent event = new PaymentFailedEvent(
                     p.getPaymentId(), p.getSourceAccountId(), amount,
-                    p.getCurrency(), reason, transferKey, debitApplied, System.currentTimeMillis());
+                    p.getCurrency(), reason, transferKey, debitApplied, compensateApplied, System.currentTimeMillis());
             outboxRepository.save(new Outbox(p.getPaymentId(), "PaymentFailed",
                     objectMapper.writeValueAsString(event)));
         } catch (Exception e) {

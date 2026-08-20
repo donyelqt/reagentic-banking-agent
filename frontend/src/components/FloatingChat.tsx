@@ -72,9 +72,14 @@ export default function FloatingChat({ accounts, onExpand }: { accounts: Account
 
   function onApprove() {
     if (!last) return
+    if (!last.approvalId) {
+      setMessages((m) => [...m, { role: 'agent', text: 'This approval session expired. Please ask again and re-approve.' }])
+      setLast(null)
+      return
+    }
     const ids = last.pendingSteps.map((s) => s.stepId)
     setMessages((m) => [...m, { role: 'user', text: 'Approved: ' + ids.join(', ') }])
-    send('', { plan: last.plan, approval: ids }, followUpChips(false, 'Approved: ' + ids.join(', ')))
+    send('', { approvalId: last.approvalId, approval: ids }, followUpChips(false, 'Approved: ' + ids.join(', ')))
   }
 
   return (

@@ -65,10 +65,16 @@ export default function Transfer({ accounts, onDone }: { accounts: AccountView[]
 
   async function onApprove() {
     if (!last) return
+    if (!last.approvalId) {
+      setMsg({ kind: 'err', text: 'This approval session expired. Please review the transfer again and re-confirm.' })
+      setLast(null)
+      setPhase('idle')
+      return
+    }
     setPhase('executing')
     try {
       const ids = last.pendingSteps.map((s) => s.stepId)
-      const res = await agentChat({ plan: last.plan, approval: ids })
+      const res = await agentChat({ approvalId: last.approvalId, approval: ids })
       const result = res.results.find((r) => r.stepId === ids[0]) ?? res.results[0]
       if (result && !result.ok) {
         setMsg({ kind: 'err', text: result.error ?? 'The transfer failed.' })

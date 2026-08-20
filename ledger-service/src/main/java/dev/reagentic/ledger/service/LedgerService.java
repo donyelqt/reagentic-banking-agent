@@ -8,6 +8,7 @@ import dev.reagentic.ledger.repository.LedgerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,8 +37,14 @@ public class LedgerService {
             log.warn("LEDGER FAULT INJECTED: skipping append for payment {}", e.paymentId());
             return;
         }
-        append(e.sourceAccountId(), e.paymentId(), "DEBIT", e.amount().negate());
-        append(e.destinationAccountId(), e.paymentId(), "CREDIT", e.amount());
+        try {
+            append(e.sourceAccountId(), e.paymentId(), "DEBIT", e.amount().negate());
+            append(e.destinationAccountId(), e.paymentId(), "CREDIT", e.amount());
+        } catch (DataIntegrityViolationException ex) {
+            // Redelivery racing another consumer: the unique (payment_id, type)
+            // index already holds this payment's legs, so this is a no-op.
+            log.warn("Ledger duplicate delivery for payment {} ignored", e.paymentId());
+        }
     }
 
     @Transactional
@@ -50,15 +57,24 @@ public class LedgerService {
             return;
         }
         if (e.debitApplied()) {
-            append(e.sourceAccountId(), e.paymentId(), "DEBIT_FAILED", e.amount().negate());
-            append(e.sourceAccountId(), e.paymentId(), "COMPENSATE", e.amount());
+            try {
+                append(e.sourceAccountId(), e.paymentId(), "DEBIT_FAILED", e.amount().negate());
+                if (e.compensateApplied()) {
+                    append(e.sourceAccountId(), e.paymentId(), "COMPENSATE", e.amount());
+                } else {
+                    log.warn("Payment {} debit remains applied (compensation failed); ledger reflects the debit",
+                            e.paymentId());
+                }
+            } catch (DataIntegrityViolationException ex) {
+                log.warn("Ledger duplicate delivery for payment {} ignored", e.paymentId());
+            }
         } else {
             log.info("Payment {} failed before applying ({}); nothing to record in ledger", e.paymentId(), e.reason());
         }
     }
 
     private void append(String accountId, String paymentId, String type, Money signed) {
-        LedgerEntry last = repository.findTopByAccountIdOrderByEntryIdDesc(accountId).orElse(null);
+        LedgerEntry last = repository.findTopByAccountIdOrderByEntryIdDescForUpdate(accountId).orElse(null);
         BigDecimal prev = last == null ? BigDecimal.ZERO : last.getBalanceAfter();
         BigDecimal balanceAfter = prev.add(signed.value());
         repository.save(new LedgerEntry(accountId, paymentId, type, signed.value(), balanceAfter));

@@ -22,6 +22,8 @@ The product spine is **Direction B** (agentic operations). The insight arc (spen
 **is a** banking platform with an embedded agentic operations assistant
 **that** finds and proves what's wrong (reconciliation with root cause), moves money only after explicit human approval, and keeps every step on an immutable audit trail.
 
+> **User evidence:** user research with Khrystelline and Chris Owyan (interviewed by Doniele Arys Antonio, team GC) confirms the acute job is **account reconciliation / balancing**, not transactions or reporting — and both participants named the same bottleneck ("Yung balancing"). Customer-service ideas are a future horizon (explicitly "malawang"); that broader surface is **out of MVP scope**. See `docs/user-research/users.md`.
+
 ### Differentiation Statement
 
 **Unlike** consumer finance apps that show static charts and advice (and unlike chatbot demos that only talk)
@@ -36,7 +38,7 @@ The product spine is **Direction B** (agentic operations). The insight arc (spen
 - **Who has this problem?** Banks whose ops teams reconcile ledgers by hand; customers who can't understand why their records don't match.
 - **What is the problem?** When a ledger breaks, finding the missing entry is a slow manual hunt across millions of rows. At the same time, banks rightly refuse to let an AI touch money without proof and controls — so most "AI banking" demos stop at chat and charts.
 - **Why is it painful?** Manual reconciliation costs banks thousands of man-hours per year; exceptions stay outside straight-through processing (STP). For the intern demo, the pain is credibility: an AI that *talks* about money is a gimmick; an AI that *acts* with guardrails is engineering.
-- **Evidence:** the reconciliation invariant `balance == Σ(signed ledger entries)` is enforced in code (`reconcileAccount`, see `docs/architecture.md`); the approval gate is a backend invariant, not a model suggestion — plans that require approval are persisted **server-side** keyed by a subject-bound `approvalId`, and a client-supplied plan is never trusted for execution (PR #34); inter-service money movement authenticates with signed `SERVICE` tokens and a short-lived `X-Transfer-Auth` (PR #31); the two-role model is enforced at the service layer (money-movement internals are SERVICE-only, read internals are EMPLOYEE-only).
+- **Evidence:** user research interviews confirm the reconciliation pain as acute (Khrystelline, Chris Owyan — team GC, interviewed by Doniele Arys Antonio); see `docs/user-research/users.md`. The reconciliation invariant `balance == Σ(signed ledger entries)` is enforced in code (`reconcileAccount`, see `docs/architecture.md`); the approval gate is a backend invariant, not a model suggestion — plans that require approval are persisted **server-side** keyed by a subject-bound `approvalId`, and a client-supplied plan is never trusted for execution (PR #34); inter-service money movement authenticates with signed `SERVICE` tokens and a short-lived `X-Transfer-Auth` (PR #31); the two-role model is enforced at the service layer (money-movement internals are SERVICE-only, read internals are EMPLOYEE-only).
 
 ## 4. Target Users & Personas
 
@@ -55,7 +57,7 @@ The product spine is **Direction B** (agentic operations). The insight arc (spen
 ## 5. Strategic Context
 
 - **Business goal:** Deliver an unmistakably enterprise-grade banking demo for the Accenture Cloud Elite internship — one that graders recognize as real engineering, not a tutorial.
-- **Why now:** The platform (7 services + gateway, saga/outbox, Kafka ledger, JWT with signed service tokens, dual-role agent) is built, tested (118/118), and demo-ready. The insight arc that makes the demo's opening act visual is shipped.
+- **Why now:** The platform (7 services + gateway, saga/outbox, Kafka ledger, JWT with signed service tokens, dual-role agent) is built, tested (130/130), and demo-ready. The insight arc that makes the demo's opening act visual is shipped.
 - **Competitive landscape (peers):** Most cohort demos are a single Spring Boot service plus a chatbot, or read-only analytics dashboards. Both are beaten by a system where the AI *acts* with proof and guardrails.
 - **Decision this doc records:** Direction B is the product. See §7 for the full decision log.
 
@@ -107,7 +109,7 @@ Adopted from the team pitch, fed by the bank's own data — no CSV:
 | Metric | Target |
 |---|---|
 | Demo-time: hero flows execute live without failure | reconcile (clean + injected break), supervised transfer, 403 role denials, self-explaining chat onboarding ("What can you do?" → chips → approve) |
-| Test suite | 118/118 passing (`mvnw test`), no regressions on PR merge |
+| Test suite | 130/130 passing (`mvnw test`), no regressions on PR merge |
 | Guardrail verification | transfer without approval is impossible (server-enforced, server-held approvalId + `X-Transfer-Auth`); LLM drift falls back, never mislabels |
 | Insight arc demo beat | charts + analyze action live from ledger data — shipped and verified (301 entries, reconcile BALANCED, 9 live categories) |
 | CSV export | CSV (RFC 4180) and styled XLSX, both verifiable against the ledger (row count == Σ entries; balance column == `balance_after`); USER + EMPLOYEE routes |
@@ -158,7 +160,7 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 
 ## 13. Roadmap
 
-- **Done:** platform, dual-role agent, guardrails, classification, 118/118 tests, PR #3 hardening, security hardening — signed service tokens + `X-Transfer-Auth` + gateway strips internal headers (PR #31), server-held approval sessions (PR #34), CI test gate on PR/push (ADR-0006), landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16), statement export — RFC 4180 CSV + styled XLSX (POI), USER + EMPLOYEE routes, humanized descriptions, floating chat redesign, Story 3 insight arc (spending-by-category chart + "Analyze my spending" action + 12-month seeded history V3/V4), agent chat hero + full-page enterprise layout (PR #27), mobile brand/identity fix (PR #28)
+- **Done:** platform, dual-role agent, guardrails, classification, 130/130 tests, PR #3 hardening, security hardening — signed service tokens + `X-Transfer-Auth` + gateway strips internal headers (PR #31), server-held approval sessions (PR #34), CI test gate on PR/push (ADR-0006), landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16), statement export — RFC 4180 CSV + styled XLSX (POI), USER + EMPLOYEE routes, humanized descriptions, floating chat redesign, Story 3 insight arc (spending-by-category chart + "Analyze my spending" action + 12-month seeded history V3/V4), agent chat hero + full-page enterprise layout (PR #27), mobile brand/identity fix (PR #28)
 - **Next (committed):** none — the committed increments are shipped. Candidate follow-ups: integration/Testcontainers suite for the money path, consumer DLT/retry + observability, rate limiting, frontend unit tests, branch protection enforcing the CI gate (ADR-0006)
 - **Later (vision only, pitch-ready):** fraud detection, anomaly scoring, more agent tools
 

@@ -88,8 +88,11 @@ accounts → 404).
 ## Open questions (resolved for the demo)
 
 - **Live approve or narrative?** Live. Transfers via the agent produce
-  `pendingSteps`; the UI shows the confirmation modal and re-calls with the
-  same plan + idempotency key (executed exactly once).
+  `pendingSteps` plus a server-held `approvalId` (subject-scoped, 10-min TTL);
+  the UI shows the confirmation modal and re-calls with
+  `{ approvalId, approval: [stepIds] }` — the server, never the client, decides
+  what runs (executed exactly once; each saga leg carries its own idempotency key
+  for retry safety).
 - **LLM provider on demo day?** Gemini is the default primary
   (`AGENT_PROVIDER=gemini`): set `AGENT_GEMINI_API_KEY` in
   `infra/.env` → live Gemini planning via Spring AI's `google-genai` starter

@@ -6,5 +6,6 @@ public record AgentResponse(
         List<Step> plan,
         List<StepResult> results,
         List<Step> pendingSteps,
+        String approvalId,
         String reply) {
 }

@@ -2,6 +2,7 @@ package dev.reagentic.ai.web;
 
 import dev.reagentic.ai.agent.AgentResponse;
 import dev.reagentic.ai.agent.AgentService;
+import dev.reagentic.ai.agent.ApprovalException;
 import dev.reagentic.ai.agent.ChatRequest;
 import dev.reagentic.ai.agent.ClassifyRequest;
 import dev.reagentic.ai.agent.ClassifyResponse;
@@ -35,7 +36,8 @@ public class AgentController {
         if (token == null || token.isBlank()) {
             throw new MissingTokenException();
         }
-        return agentService.chat(req, token, roleOf(auth));
+        String subject = auth == null ? null : String.valueOf(auth.getPrincipal());
+        return agentService.chat(req, token, roleOf(auth), subject);
     }
 
     @PostMapping("/classify")
@@ -80,6 +82,19 @@ public class AgentController {
     @ExceptionHandler(MissingTokenException.class)
     public ResponseEntity<Void> missing() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    @ExceptionHandler(ApprovalException.class)
+    public ResponseEntity<Map<String, Object>> approvalError(ApprovalException e) {
+        int status = switch (e.getKind()) {
+            case FORBIDDEN -> 403;
+            case EXPIRED -> 410;
+            case INVALID -> 400;
+        };
+        return ResponseEntity.status(status).body(Map.of(
+                "status", status,
+                "code", "APPROVAL_" + e.getKind(),
+                "message", e.getMessage()));
     }
 
     public static class MissingTokenException extends RuntimeException {

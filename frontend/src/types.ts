@@ -42,6 +42,7 @@ export interface AgentResponse {
   plan: Step[]
   results: StepResult[]
   pendingSteps: Step[]
+  approvalId?: string | null
   reply: string
 }
 
@@ -51,6 +52,7 @@ export interface ChatRequest {
   plan?: Step[]
   approval?: string[]
   jwt?: string
+  approvalId?: string
 }
 
 export interface ReconcileEvidence {

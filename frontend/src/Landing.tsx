@@ -65,7 +65,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
               <div className="glass-dark rounded-[28px] p-6 w-full max-w-md ml-auto shadow-[0_40px_120px_-30px_rgba(45,67,245,.6)]">
                 <div className="flex items-center justify-between mb-5">
                   <span className="text-white/70 text-sm">Today</span>
-                  <span className="chip !bg-white/10 !border-white/15 !text-white/80">Live</span>
+                  <span className="chip !bg-white/10 !border-white/15 !text-white/80">Demo preview</span>
                 </div>
                 <div className="text-white/55 text-sm">Total available</div>
                 <div className="font-display text-5xl text-white mt-1">$1,550.00</div>

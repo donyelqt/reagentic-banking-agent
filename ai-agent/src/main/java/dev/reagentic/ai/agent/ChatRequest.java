@@ -7,5 +7,6 @@ public record ChatRequest(
         List<String> history,
         List<Step> plan,
         List<String> approval,
-        String jwt) {
+        String jwt,
+        String approvalId) {
 }

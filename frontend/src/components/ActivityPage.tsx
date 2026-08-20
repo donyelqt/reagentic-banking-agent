@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { getLedger, downloadStatementCsv, downloadStatementExcel, classifyEntries } from '../api'
 import type { AccountView, LedgerEntry } from '../types'
 import { CATEGORY_COLORS } from '../lib/chartColors'
-import { maskedId } from '../utils'
 
 const PAGE = 50
 
@@ -69,7 +68,7 @@ export default function ActivityPage({ accounts }: { accounts: AccountView[] }) 
               <label className="flex items-center gap-3">
                 <span className="label">Account</span>
                 <select className="field !w-auto" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-                  {accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.type} ({maskedId(a.accountId)})</option>)}
+                  {accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.type} ({a.accountId})</option>)}
                 </select>
               </label>
             )}

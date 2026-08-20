@@ -35,11 +35,7 @@ The acute job is **account reconciliation / balancing** — not transactions, no
 ## Chris Owyan — CS student
 
 **Echoing Khrystelline:**
-> "Pwede kaya yung customer service? Pero malawang din kasi customer service eh"
-
-> "Sa accounting dalawa yung mostly natatagalan amin noon either sa mortgage or sa balancing. Same din sa accounting essentials."
-
-> "Yung balancing [pas] 😆"
+> "Pwede kaya yung customer service? Pero malawak din kasi customer service eh"
 
 ### Job framing
 Same core job as Khrystelline: kill the manual balancing step. Echoes Khrystelline's framing, so this is a consistent team signal, not a one-off complaint.

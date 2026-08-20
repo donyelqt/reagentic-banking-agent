@@ -178,7 +178,7 @@ function AppShell({
                 )
               }
             />
-            <Route path="/agent" element={<AgentChat isEmployee={isEmployee} onAccountsChanged={onAccountsChanged} />} />
+            <Route path="/agent" element={<AgentChat isEmployee={isEmployee} accounts={accounts} onAccountsChanged={onAccountsChanged} />} />
             <Route
               path="/ops"
               element={

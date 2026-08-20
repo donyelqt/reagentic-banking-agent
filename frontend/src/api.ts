@@ -12,7 +12,14 @@ async function req<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(API + path, { ...opts, headers });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || "HTTP " + res.status);
+    let message = text || "HTTP " + res.status;
+    try {
+      const body = JSON.parse(text);
+      message = body?.message ?? body?.error ?? message;
+    } catch {
+      // non-JSON error body - keep the raw text
+    }
+    throw new Error(message);
   }
   return res.json();
 }

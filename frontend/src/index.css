@@ -90,8 +90,8 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,te
   .field:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);background:#fff}
   .label{font-size:.8rem;font-weight:500;color:var(--muted);letter-spacing:.01em}
   .chip{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .7rem;border-radius:999px;font-size:.78rem;font-weight:500;border:1px solid var(--line);background:#fff;color:var(--ink)}
-  .tag-pos{color:var(--pos);background:rgba(12,166,120,.12)}
-  .tag-neg{color:var(--neg);background:rgba(229,72,77,.12)}
+  .tag-pos{color:var(--pos);background:rgba(11,138,99,.12)}
+  .tag-neg{color:var(--neg);background:rgba(201,50,60,.12)}
 }
 
 .grain{position:relative}

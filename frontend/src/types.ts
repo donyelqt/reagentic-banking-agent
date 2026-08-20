@@ -46,7 +46,7 @@ export interface AgentResponse {
 }
 
 export interface ChatRequest {
-  message: string
+  message?: string
   history?: string[]
   plan?: Step[]
   approval?: string[]

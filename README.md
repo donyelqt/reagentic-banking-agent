@@ -53,12 +53,14 @@ deliberately does not (yet).
   reject USER tokens with 403; EMPLOYEE tokens cannot move money (transfers
   are denied for ops).
 - Money movement is **approval-gated and idempotent**: mutating agent steps
-  become `pendingSteps` requiring explicit approval, execution re-calls with the
-  same idempotency key — executed exactly once. Approval is enforced **at the
-  API boundary**: the ai-agent mints a short-lived signed `TRANSFER`
-  authorization only for an approved `transferFunds` step, and `payment-service`
-  rejects any transfer that does not present it (403) — a direct call to
-  `/api/payments/transfer` cannot skip the approval flow.
+  become `pendingSteps` requiring explicit approval. Approval is **server-held
+  and server-enforced**: plans are persisted under a subject-bound `approvalId`
+  (the client decides *whether* a step runs, never *what* executes), execution
+  re-calls with that `approvalId`, and idempotency keys guarantee exactly-once.
+  The ai-agent mints a short-lived signed `TRANSFER` authorization only for an
+  approved `transferFunds` step, and `payment-service` rejects any transfer
+  that does not present it (403) — a direct call to `/api/payments/transfer`
+  cannot skip the approval flow.
 - Money is `BigDecimal` scale 2, serialized as JSON **strings** — no float
   drift, no wire-format ambiguity.
 - Secrets live in environment variables only (`infra/.env.example` is the
@@ -144,7 +146,8 @@ One system, two roles (see `docs/ideas/two-role-agent-access-model.md`):
    `MISSING_CREDIT_LEG`), a **12-entry evidence trail**, and a **proposed
    corrective journal entry** (not executed — ops review required).
 3. Agent transfers require explicit approval (`pendingSteps`); the frontend
-   prompts, approval re-calls with the same idempotency key (executed exactly
+   prompts, and approval echoes the server-issued `approvalId` — the client
+   supplies only the approved step ids, never the plan (executed exactly
    once).
 
 ## Docs

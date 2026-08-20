@@ -36,7 +36,7 @@ The product spine is **Direction B** (agentic operations). The insight arc (spen
 - **Who has this problem?** Banks whose ops teams reconcile ledgers by hand; customers who can't understand why their records don't match.
 - **What is the problem?** When a ledger breaks, finding the missing entry is a slow manual hunt across millions of rows. At the same time, banks rightly refuse to let an AI touch money without proof and controls — so most "AI banking" demos stop at chat and charts.
 - **Why is it painful?** Manual reconciliation costs banks thousands of man-hours per year; exceptions stay outside straight-through processing (STP). For the intern demo, the pain is credibility: an AI that *talks* about money is a gimmick; an AI that *acts* with guardrails is engineering.
-- **Evidence:** the reconciliation invariant `balance == Σ(signed ledger entries)` is enforced in code (`reconcileAccount`, see `docs/architecture.md`); the approval gate is a backend invariant, not a model suggestion (PR #3 hardening); the two-role model is enforced at the service layer (internal endpoints are EMPLOYEE-only).
+- **Evidence:** the reconciliation invariant `balance == Σ(signed ledger entries)` is enforced in code (`reconcileAccount`, see `docs/architecture.md`); the approval gate is a backend invariant, not a model suggestion — plans that require approval are persisted **server-side** keyed by a subject-bound `approvalId`, and a client-supplied plan is never trusted for execution (PR #34); inter-service money movement authenticates with signed `SERVICE` tokens and a short-lived `X-Transfer-Auth` (PR #31); the two-role model is enforced at the service layer (money-movement internals are SERVICE-only, read internals are EMPLOYEE-only).
 
 ## 4. Target Users & Personas
 
@@ -55,24 +55,25 @@ The product spine is **Direction B** (agentic operations). The insight arc (spen
 ## 5. Strategic Context
 
 - **Business goal:** Deliver an unmistakably enterprise-grade banking demo for the Accenture Cloud Elite internship — one that graders recognize as real engineering, not a tutorial.
-- **Why now:** The platform (6 services, saga/outbox, Kafka ledger, JWT, dual-role agent) is built, tested (93/93), and demo-ready. The remaining work is the insight arc that makes the demo's opening act visual.
+- **Why now:** The platform (7 services + gateway, saga/outbox, Kafka ledger, JWT with signed service tokens, dual-role agent) is built, tested (118/118), and demo-ready. The insight arc that makes the demo's opening act visual is shipped.
 - **Competitive landscape (peers):** Most cohort demos are a single Spring Boot service plus a chatbot, or read-only analytics dashboards. Both are beaten by a system where the AI *acts* with proof and guardrails.
 - **Decision this doc records:** Direction B is the product. See §7 for the full decision log.
 
 ## 6. Solution Overview
 
-A multi-service bank (gateway → auth/account/payment/ledger/notification) with an AI agent wired into the real backend via typed tool calls, JWT propagation (zero internal trust), and four pillars:
+A multi-service bank (gateway → auth/account/payment/ledger/notification/ai-agent) with an AI agent wired into the real backend via typed tool calls, signed service JWTs (zero internal trust), and four pillars:
 
 ### Pillar 1 — Agentic operations with enforced guardrails
 - The agent plans (LLM primary, deterministic keyword fallback), executes only approved steps, and transfers carry server-enforced `confirmationRequired=true` plus idempotency keys (exactly-once).
+- Approval is **server-held**: plans containing approval-required steps are persisted server-side under a subject-bound `approvalId`; an approval echo may only reference a stored session owned by the same caller. The client decides *whether* a step runs — never *what* executes.
 - **The money moves only after a human approves — enforced in code, not requested from the model.**
 
 ### Pillar 2 — Dual-role security model
 - USER: ownership-scoped reads + supervised transfers. EMPLOYEE: ops console, reconciliation over any account, internal reads — and no transfer powers.
-- Internal endpoints are EMPLOYEE-only at the service layer; a customer token can never reach them.
+- Role gates are enforced at the service layer: money-movement internal endpoints (`debit`/`credit`) require signed SERVICE tokens; read internals (`/api/accounts/internal/**`, `/api/ledger/internal/**`) are EMPLOYEE-only. A customer token can never reach them.
 
 ### Pillar 3 — Event-driven money
-- Transfers run a saga via transaction outbox → Kafka; the ledger is append-only with `balance_after` on every entry; notification follows events.
+- Transfers run a saga via transaction outbox → Kafka; the ledger is append-only with `balance_after` on every entry; notification follows events. Approved transfers are authorized with a short-lived signed `X-Transfer-Auth` token (`payment-service` rejects any transfer without it — 403).
 - The money state is authoritative in account-service; the ledger is the immutable audit trail.
 
 ### Pillar 4 — Grounded AI
@@ -91,13 +92,13 @@ A multi-service bank (gateway → auth/account/payment/ledger/notification) with
 | Live bank / Open Banking integration | **Out of scope** | BSP accreditation is not attainable in-sprint; the ledger is the more credible data source anyway |
 | Corrective journal execution | **Out of scope** | The agent proposes; humans execute. This is the trust story, not a limitation |
 
-## 8. The Insight Arc (committed next)
+## 8. The Insight Arc (shipped)
 
 Adopted from the team pitch, fed by the bank's own data — no CSV:
 
-1. **`V3__seed_demo_history.sql`** — a year of realistic, categorized transactions whose `balance_after` chain lands exactly on the seeded balances (self-consistent by construction; reconciliation stays green). **Required, not nice-to-have:** the current cash-flow chart exposes the sparse-history gap — the axis reads "Jan 1, Aug 16-18" because seed data has a seven-month dead zone; charts are only believable with real history.
-2. **Dashboard charts** — spending by category from `/api/agent/classify` over real ledger transactions (one source of truth). Cash-flow chart (recharts) is live; the category breakdown (the mislabeled balance pie) and the analyze action are the remaining work.
-3. **"Analyze my spending" chat action** — the agent summarizes where money went and flags patterns (e.g., overspending on dining), then can *act* on it (transfer + approval modal).
+1. **`V3__seed_demo_history.sql`** — a year of realistic, categorized transactions whose `balance_after` chain lands exactly on the seeded balances (self-consistent by construction; reconciliation stays green). **Done** — shipped with a follow-up `V4__vary_monthly_cash_flow.sql` so the cash-flow axis reads a believable monthly series (no Jan-1-to-Aug dead zone).
+2. **Dashboard charts** — spending by category from `/api/agent/classify` over real ledger transactions (one source of truth). **Done** — cash-flow chart (recharts) and the spending-by-category pie both live.
+3. **"Analyze my spending" chat action** — the agent summarizes where money went and flags patterns (e.g., overspending on dining), then can *act* on it (transfer + approval modal). **Done** — available in both AgentChat and FloatingChat (deterministic, no LLM key needed).
 
 **Demo narrative (rising arc):** insight ("you overspent on dining") → propose ("transfer 500 to savings?") → approve (modal) → the ledger moves on screen.
 
@@ -106,9 +107,9 @@ Adopted from the team pitch, fed by the bank's own data — no CSV:
 | Metric | Target |
 |---|---|
 | Demo-time: hero flows execute live without failure | reconcile (clean + injected break), supervised transfer, 403 role denials, self-explaining chat onboarding ("What can you do?" → chips → approve) |
-| Test suite | 93/93 passing (`mvnw test`), no regressions on PR merge |
-| Guardrail verification | transfer without approval is impossible (server-enforced); LLM drift falls back, never mislabels |
-| Insight arc demo beat | charts + analyze action live from ledger data within the next increment |
+| Test suite | 118/118 passing (`mvnw test`), no regressions on PR merge |
+| Guardrail verification | transfer without approval is impossible (server-enforced, server-held approvalId + `X-Transfer-Auth`); LLM drift falls back, never mislabels |
+| Insight arc demo beat | charts + analyze action live from ledger data — shipped and verified (301 entries, reconcile BALANCED, 9 live categories) |
 | CSV export | CSV (RFC 4180) and styled XLSX, both verifiable against the ledger (row count == Σ entries; balance column == `balance_after`); USER + EMPLOYEE routes |
 
 ## 10. User Stories & Requirements
@@ -117,7 +118,7 @@ Adopted from the team pitch, fed by the bank's own data — no CSV:
 As a customer, I want the agent to arrange a transfer but require my confirmation, so I control every movement.
    - [x] Agent returns `pendingSteps`; nothing executes
    - [x] Frontend shows the plan (from/to/amount) and an Approve action
-   - [x] Approval re-calls with the same idempotency key; executing twice yields one payment
+   - [x] Approval re-calls with the server-issued `approvalId` (subject-bound, short TTL); the client supplies only the approved step ids, never the plan — executing twice yields one payment
    - [x] A plan step for `transferFunds` can never arrive with `confirmationRequired=false` (trust-boundary invariant in `Executor`; planner flag + executor enforcement; regression test in `ExecutorTest`)
 
 **Story 2 — Reconciliation with root cause (EMPLOYEE)**
@@ -147,24 +148,24 @@ As a customer, I want to see where my money went, so I can act on wasteful patte
 ## 12. Dependencies & Risks
 
 | Risk | Mitigation |
-|---|---|
+|---|---|---|
 | Demo day LLM key absent | Deterministic fallback is the default; Gemini key is a one-line `.env` change (see `docs/demo-runbook.md`) |
-| Insight arc slips scope | It is the *only* committed next increment; everything else stays proposed |
-| Sparse seed history makes charts unbelievable (Jan-1-to-Aug gap on the axis) | `V3__seed_demo_history.sql` lands before chart wiring ships; the balance chain is self-consistent by construction |
+| Insight arc slips scope | Shipped — V3/V4 seed history, category charts, and the analyze action are live and ledger-verified |
+| Sparse seed history makes charts unbelievable (Jan-1-to-Aug gap on the axis) | Resolved — `V3__seed_demo_history.sql` + `V4__vary_monthly_cash_flow.sql` produce a believable monthly series; chain self-consistent by construction |
 | CSV export scope creep (parsers, formats, pagination) | Export is a read-only projection: two formats (RFC 4180 CSV + styled XLSX) from the same ledger rows, no import counterpart, no parsing |
 | Stale jar in the demo image | Build the jar with `mvnw package` before `docker compose up --build` (documented in the demo runbook) |
 | Team story divergence (two pitch versions) | This doc is the canonical direction; the deck should be updated from it |
 
 ## 13. Roadmap
 
-- **Done:** platform, dual-role agent, guardrails, classification, 103/103 tests, PR #3 hardening, landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16), statement export — RFC 4180 CSV + styled XLSX (POI), USER + EMPLOYEE routes, humanized descriptions, floating chat redesign, Story 3 insight arc (spending-by-category chart + "Analyze my spending" action + 12-month seeded history), agent chat hero + full-page enterprise layout (PR #27), mobile brand/identity fix (PR #28)
-- **Next (committed):** insight arc — V3 seed history → category charts + analyze action
-- **Later (vision only, pitch-ready):** fraud detection, anomaly scoring, more agent tools, CI/CD test gate on merge (ADR 0006) + branch protection
+- **Done:** platform, dual-role agent, guardrails, classification, 118/118 tests, PR #3 hardening, security hardening — signed service tokens + `X-Transfer-Auth` + gateway strips internal headers (PR #31), server-held approval sessions (PR #34), CI test gate on PR/push (ADR-0006), landing page funnel (PR #4), chat onboarding — "What can you do?" capability prompt + clickable action/follow-up chips (PR #5), CSV-free landing narrative (PR #16), statement export — RFC 4180 CSV + styled XLSX (POI), USER + EMPLOYEE routes, humanized descriptions, floating chat redesign, Story 3 insight arc (spending-by-category chart + "Analyze my spending" action + 12-month seeded history V3/V4), agent chat hero + full-page enterprise layout (PR #27), mobile brand/identity fix (PR #28)
+- **Next (committed):** none — the committed increments are shipped. Candidate follow-ups: integration/Testcontainers suite for the money path, consumer DLT/retry + observability, rate limiting, frontend unit tests, branch protection enforcing the CI gate (ADR-0006)
+- **Later (vision only, pitch-ready):** fraud detection, anomaly scoring, more agent tools
 
 ## 14. Open Questions
 
 - ~~Charts library choice~~ — **Resolved:** recharts, already in production use for the cash-flow chart. Remaining: the chart data contract with `/classify` (response shape for category breakdown)
 - ~~CSV export placement and scope~~ — **Resolved:** ledger-service serves `GET /api/ledger/{accountId}/statement.csv` (ownership-scoped via account-service, 404 for cross-account) and `GET /api/ledger/internal/{accountId}/statement.csv` (EMPLOYEE-only, any account), mirroring the existing list endpoints; RFC 4180-clean (UTF-8 BOM, CRLF, ISO-8601 UTC dates, signed amounts, running balance)
-- Whether the seed history lives in ledger-service migration or account-service (ledger is the source for chart data)
-- Where the CSV export endpoint lives (ledger-service owns the projection; account-service owns entitlements) and whether it's scoped to USER or also EMPLOYEE
+- ~~Whether the seed history lives in ledger-service migration or account-service (ledger is the source for chart data)~~ — **Resolved:** ledger-service owns V3/V4 seed migrations
+- ~~Where the CSV export endpoint lives (ledger-service owns the projection; account-service owns entitlements) and whether it's scoped to USER or also EMPLOYEE~~ — **Resolved:** ledger-service serves both the ownership-scoped USER route and the EMPLOYEE-only internal route
 - Demo-day LLM provider: Gemini key set, or deterministic fallback presented knowingly

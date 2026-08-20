@@ -112,7 +112,7 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
   const heroDesc = isEmployee
     ? "Diagnose ledger breaks with root-cause evidence straight from the immutable ledger. Nothing here executes without your approval."
     : "I'm your private banking agent. I can check balances, show transactions, and move money between your accounts — transfers always wait for your approval.";
-  const heroChips = actionChips(isEmployee);
+  const heroChips = ["What can you do?", ...actionChips(isEmployee)];
 
   return (
     <div className="flex flex-col min-h-0 h-[calc(100dvh_-_3.5rem)] md:h-[100dvh]">

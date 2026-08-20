@@ -129,16 +129,16 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
         <div ref={scrollRef} className="flex-1 overflow-auto px-4 md:px-8 py-6">
           {messages.length === 0 ? (
             <div className="h-full grid place-items-center">
-              <div className="w-full max-w-md text-center">
+              <div className="w-full max-w-lg text-center">
                 <div className="flex justify-center">
                   <div className="hero-brand"><Brand tone="light" /></div>
                 </div>
-                <p className="font-display text-2xl mt-5">{heroTitle}</p>
-                <p className="text-muted text-sm leading-relaxed mt-2">{heroDesc}</p>
-                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                <p className="font-display text-3xl mt-6">{heroTitle}</p>
+                <p className="text-muted text-base leading-relaxed mt-3">{heroDesc}</p>
+                <div className="mt-7 flex flex-wrap justify-center gap-2.5">
                   {heroChips.map((c) => (
                     <button key={c} onClick={() => handlePrompt(c)} disabled={busy}
-                      className="text-xs px-3.5 py-1.5 rounded-full border border-accent/35 bg-white text-ink shadow-soft hover:bg-accent hover:text-white hover:border-accent hover:-translate-y-0.5 transition disabled:opacity-50">
+                      className="text-sm px-4 py-2 rounded-full border border-accent/35 bg-white text-ink shadow-soft hover:bg-accent hover:text-white hover:border-accent hover:-translate-y-0.5 transition disabled:opacity-50">
                       {c}
                     </button>
                   ))}

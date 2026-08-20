@@ -4,6 +4,7 @@ import type { AccountView, CategorySpend, LedgerEntry } from '../types'
 import { useCountUp } from '../lib/useCountUp'
 import { CategoryChart } from './CategoryChart';
 import { SpendingTrendChart } from './SpendingTrendChart';
+import { maskedId } from '../utils'
 
 export default function Dashboard({ accounts, onTransfer, onViewAll }: { accounts: AccountView[]; onTransfer: () => void; onViewAll: () => void }) {
   const [allActivity, setAllActivity] = useState<LedgerEntry[]>([])
@@ -93,7 +94,7 @@ function AccountCard({ account, index, onDownloadError }: { account: AccountView
     <div className="card p-6 view-in" style={{ animationDelay: `${index * 80}ms` }}>
       <div className="flex items-center justify-between">
         <span className="chip capitalize">{account.type.toLowerCase()}</span>
-        <span className="text-xs text-muted font-mono">{account.accountId}</span>
+        <span className="text-xs text-muted font-mono">{maskedId(account.accountId)}</span>
       </div>
       <div className="mt-5 font-display text-4xl">${amt}</div>
       <div className="mt-6 flex items-center justify-end gap-2">

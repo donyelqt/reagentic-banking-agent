@@ -58,23 +58,31 @@ export default function ApprovalModal({ steps, onApprove, onCancel, busy, accoun
     approveRef.current?.focus()
   }, [])
 
+  const primaryAmount = steps
+    .map((s) => formatStepDetails(s.args, accounts)?.amount)
+    .find(Boolean)
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="approval-title"
       aria-busy={busy}
-      className={`absolute inset-0 z-20 grid place-items-end sm:place-items-center p-3 backdrop-in ${
+      className={`fixed inset-0 z-50 grid place-items-end sm:place-items-center p-3 backdrop-in ${
         backdrop === 'blur' ? 'bg-white/10 backdrop-blur-sm' : backdrop === 'dark' ? 'bg-[#0A0B14]/80' : ''
       }`}
       onKeyDown={(e) => { if (e.key === 'Escape' && !busy) onCancel() }}
     >
       <div className="card p-5 w-full max-w-md modal-in shadow-lift">
         <div className="flex items-center gap-2 mb-3">
-          <span aria-hidden="true" className="w-7 h-7 rounded-full grid place-items-center bg-gold/15 text-gold font-display">!</span>
-          <h2 id="approval-title" className="font-display text-lg">Confirmation required</h2>
+          <span aria-hidden="true" className="w-7 h-7 rounded-full grid place-items-center bg-accent/10 text-accent">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <h2 id="approval-title" className="font-display text-lg">Review before you send</h2>
         </div>
-        <p className="text-sm text-muted mb-3">The agent prepared these steps. Approve to execute.</p>
+        <p className="text-sm text-muted mb-3">Check the details below. Nothing leaves your account until you confirm.</p>
         <ul className="space-y-2 mb-4">
           {steps.map((s) => {
             const detail = formatStepDetails(s.args, accounts)
@@ -95,10 +103,11 @@ export default function ApprovalModal({ steps, onApprove, onCancel, busy, accoun
         </ul>
         <div className="flex gap-2">
           <button ref={approveRef} onClick={onApprove} disabled={busy} className="btn btn-accent flex-1">
-            {busy ? 'Executing…' : 'Approve & execute'}
+            {busy ? 'Sending…' : primaryAmount ? `Send $${primaryAmount}` : 'Confirm & send'}
           </button>
-          <button onClick={onCancel} disabled={busy} className="btn btn-ghost flex-1">Cancel</button>
+          <button onClick={onCancel} disabled={busy} className="btn btn-ghost flex-1">Back</button>
         </div>
+        <p className="text-center text-xs text-muted mt-3">Secured by Reagentic · you can cancel before confirming.</p>
       </div>
     </div>
   )

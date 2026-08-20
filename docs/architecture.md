@@ -34,11 +34,21 @@ cross-account read, even if the planner proposes it. The customer-facing
 account-service (other accounts → 404).
 
 Internal **mutates** (`debit`/`credit`) are the only endpoints that may run under
-a user-context **service** principal: `payment-service` authenticates with a
-shared secret (`X-Service-Token` == `SERVICE_TOKEN`, both wired from the
-environment, never logged) and forwards the caller's subject
-(`X-User-Subject`) so `account-service` still enforces ownership. Anything else
+a user-context **service** principal: `payment-service` mints a short-lived
+signed JWT (subject = the acting user, role = `SERVICE`, signed with the shared
+`JWT_SECRET`) and presents it as the `Authorization` header, so `account-service`
+still enforces ownership while granting `ROLE_SERVICE` for the leg. There is no
+static shared bearer: the legacy `X-Service-Token`/`X-User-Subject` path is gone,
+and the gateway strips those headers from every external request. Anything else
 under `/api/accounts/internal/**` remains EMPLOYEE-only.
+
+Transfers are approval-gated **at the API boundary**: the ai-agent mints a
+short-lived signed `TRANSFER` authorization (bound to the caller's subject and
+the transfer's idempotency key) only after an approved `transferFunds` step has
+passed the executor's approval gate, and `payment-service` rejects any transfer
+that does not present it (`403 TRANSFER_UNAUTHORIZED`). A direct call to
+`/api/payments/transfer` without that authorization is refused — approval is
+server-enforced, not a UI convention.
 
 ## Data flow — a transfer
 1. `payment-service` runs the saga: `debit(source)` → `credit(dest)`, each with a

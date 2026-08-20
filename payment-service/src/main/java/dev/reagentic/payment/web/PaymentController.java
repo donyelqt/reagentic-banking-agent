@@ -37,9 +37,10 @@ public class PaymentController {
 
     @PostMapping("/transfer")
     public ApiResponse<PaymentView> transfer(@RequestHeader("Authorization") String authHeader,
+                                             @RequestHeader(value = "X-Transfer-Auth", required = false) String transferAuth,
                                              @Valid @RequestBody TransferRequest req) {
         Payment p = paymentService.transfer(authHeader, req.sourceAccountId(),
-                req.destinationAccountId(), Money.of(req.amount()), req.idempotencyKey());
+                req.destinationAccountId(), Money.of(req.amount()), req.idempotencyKey(), transferAuth);
         if (p.getStatus() == PaymentStatus.FAILED) {
             throw new PaymentService.PaymentFailedException(p.getReason());
         }

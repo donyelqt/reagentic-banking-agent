@@ -22,7 +22,7 @@ The product spine is **Direction B** (agentic operations). The insight arc (spen
 **is a** banking platform with an embedded agentic operations assistant
 **that** finds and proves what's wrong (reconciliation with root cause), moves money only after explicit human approval, and keeps every step on an immutable audit trail.
 
-> **User evidence:** user research with Khrystelline and Chris Owyan (interviewed by Doniele Arys Antonio, team GC) confirms the acute job is **account reconciliation / balancing**, not transactions or reporting — and both participants named the same bottleneck ("Yung balancing"). Customer-service ideas are a future horizon (explicitly "malawang"); that broader surface is **out of MVP scope**. See `docs/user-research/users.md`.
+> **User evidence:** user research with Khrystelline (ex-Business ad major in finance student) and Chris Owyan (interviewed by Doniele Arys Antonio, team GC) confirms the acute job is **account reconciliation / balancing**, not transactions or reporting — and both participants named the same bottleneck ("Yung balancing"). Customer-service ideas are a future horizon (explicitly "malawak"); that broader surface is **out of MVP scope**. See `docs/user-research/users.md`.
 
 ### Differentiation Statement
 

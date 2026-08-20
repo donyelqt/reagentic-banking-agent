@@ -115,7 +115,7 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
   const heroChips = actionChips(isEmployee);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex flex-col min-h-0 h-[calc(100dvh_-_3.5rem)] md:h-[100dvh]">
       <h1 className="sr-only">{isEmployee ? "Reconciliation Console" : "Your Agent"}</h1>
       {isEmployee && (
         <div className="flex items-center gap-3 px-4 md:px-8 py-3 border-b border-line bg-surface/40">

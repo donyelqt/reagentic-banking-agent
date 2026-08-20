@@ -26,7 +26,7 @@ notification follow).
 
 Agent tab (customer copy): `transfer 50 to savings` → the agent returns
 `pendingSteps` → confirmation modal shows the plan (`from`/`to`/`amount`) →
-**Approve** → transfer executes with the same idempotency key; balances on
+**Approve** → the approval echoes the server-issued `approvalId`; balances on
 Dashboard refresh live (approve twice → still one payment: exactly-once).
 
 Ask `what's my balance?` or `show my transactions` — the agent reads the

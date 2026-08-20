@@ -53,11 +53,11 @@ deliberately does not (yet).
   drift, no wire-format ambiguity.
 - Secrets live in environment variables only (`infra/.env.example` is the
   template); no credentials, keys, or tokens in the repository or CI.
-- Frontend holds auth tokens in memory, not `localStorage` — no XSS-stealable
-  session storage.
+- Frontend persists the auth token in `localStorage` for session continuity
+  across reloads — a known XSS trade-off, tracked under gaps below.
 
 **Engineering (CI-verified):**
-- 95 unit tests across the Maven reactor, gated by GitHub Actions CI on every
+- 103 unit tests across the Maven reactor, gated by GitHub Actions CI on every
   PR/push to `main`/`donieledev` (compile, tests, frontend typecheck + build,
   production dependency audit) — see ADR-0006.
 - Decisions are recorded, not recalled: ADRs in `infra/docs/adrs/` document
@@ -67,6 +67,9 @@ deliberately does not (yet).
 **Known gaps (tracked, not hidden):**
 - Rate limiting (auth and API endpoints) — not yet implemented.
 - Frontend unit tests — not yet present (typecheck + build are gated).
+- Auth token persists in `localStorage` for session continuity — an accepted
+  XSS trade-off for the demo; a hardened build would move to short-lived
+  memory/session tokens.
 - Live deployment — planned but not executed (no cloud billing account; see
   ADR-0008 and `docs/deployment.md`).
 
@@ -102,7 +105,7 @@ Each service reads env vars (`JWT_SECRET`, `*_DB_URL`, `KAFKA_BOOTSTRAP_SERVERS`
 
 ## Verify (what CI runs)
 ```bash
-.\mvnw -B test                                    # backend: 95 tests, 8 modules (JDK 17)
+.\mvnw -B test                                    # backend: 103 tests, 8 modules (JDK 17)
 cd frontend && npm ci && npm run typecheck && npm run build   # frontend gates
 ```
 The same gates run in GitHub Actions on every PR/push (see ADR-0006).

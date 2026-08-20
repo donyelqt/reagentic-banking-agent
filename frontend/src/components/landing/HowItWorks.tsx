@@ -5,7 +5,7 @@ const steps = [
   {
     n: '01',
     title: 'Say it',
-    body: 'Type or speak a plain sentence — "move $50 to savings". The agent classifies intent and amount, then drafts a plan. Nothing moves yet.'
+    body: 'Type a plain sentence — "move $50 to savings". The agent classifies intent and amount, then drafts a plan. Nothing moves yet.'
   },
   {
     n: '02',

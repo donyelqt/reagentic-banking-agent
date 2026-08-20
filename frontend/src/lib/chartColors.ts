@@ -7,4 +7,4 @@ export const CHART = {
   accent2: '#6A4BFF'
 }
 
-export const CATEGORY_COLORS = ['#2D43F5', '#0CA678', '#F59E0B', '#E5484D', '#6A4BFF', '#0EA5E9', '#C9A227', '#14130F']
+export const CATEGORY_COLORS = ['#2D43F5', '#0B8A63', '#F59E0B', '#C9323C', '#6A4BFF', '#0EA5E9', '#C9A227', '#14130F']

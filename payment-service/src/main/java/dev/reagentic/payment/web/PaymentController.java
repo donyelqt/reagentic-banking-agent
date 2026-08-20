@@ -3,6 +3,7 @@ package dev.reagentic.payment.web;
 import dev.reagentic.common.dto.ApiResponse;
 import dev.reagentic.common.money.Money;
 import dev.reagentic.payment.domain.Payment;
+import dev.reagentic.payment.domain.PaymentStatus;
 import dev.reagentic.payment.service.PaymentService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -39,6 +40,9 @@ public class PaymentController {
                                              @Valid @RequestBody TransferRequest req) {
         Payment p = paymentService.transfer(authHeader, req.sourceAccountId(),
                 req.destinationAccountId(), Money.of(req.amount()), req.idempotencyKey());
+        if (p.getStatus() == PaymentStatus.FAILED) {
+            throw new PaymentService.PaymentFailedException(p.getReason());
+        }
         return ApiResponse.ok(new PaymentView(p.getPaymentId(), p.getStatus().name(),
                 p.getSourceAccountId(), p.getDestinationAccountId(),
                 Money.of(p.getAmount()), p.getCurrency(), p.getReason()));

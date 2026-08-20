@@ -10,8 +10,8 @@ export default {
         bg: '#F6F5F1',
         surface: '#FFFFFF',
         accent: { DEFAULT: '#2D43F5', soft: 'rgba(45,67,245,0.10)' },
-        pos: '#0CA678',
-        neg: '#E5484D',
+        pos: '#0B8A63',
+        neg: '#C9323C',
         gold: '#C9A227'
       },
       fontFamily: {

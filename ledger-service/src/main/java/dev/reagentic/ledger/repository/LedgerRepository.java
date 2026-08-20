@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface LedgerRepository extends JpaRepository<LedgerEntry, Long> {
 
-    Optional<LedgerEntry> findTopByAccountIdOrderByCreatedAtDesc(String accountId);
+    Optional<LedgerEntry> findTopByAccountIdOrderByEntryIdDesc(String accountId);
 
     boolean existsByPaymentId(String paymentId);
 

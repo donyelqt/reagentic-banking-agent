@@ -55,7 +55,7 @@ export default function Dashboard({ accounts, onTransfer, onViewAll }: { account
             classifySpending(allActivity).then(setCategorySummary).catch(() => setClassifyError(true))
           }}
         />
-        <SpendingTrendChart data={allActivity} />
+        <SpendingTrendChart data={allActivity} loading={loading} />
       </div>
 
       {dlError && (
@@ -125,7 +125,7 @@ function ActivityRow({ e }: { e: LedgerEntry }) {
   return (
     <li className="py-3.5 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <span aria-hidden="true" className={`w-9 h-9 rounded-full grid place-items-center ${credit ? 'bg-[rgba(12,166,120,.12)] text-pos' : 'bg-[rgba(229,72,77,.12)] text-neg'}`}>{credit ? '↑' : '↓'}</span>
+        <span aria-hidden="true" className={`w-9 h-9 rounded-full grid place-items-center ${credit ? 'bg-[rgba(11,138,99,.12)] text-pos' : 'bg-[rgba(201,50,60,.12)] text-neg'}`}>{credit ? '↑' : '↓'}</span>
         <div>
           <div className="text-sm font-medium">{label}</div>
           <div className="text-xs text-muted">{date} · {e.paymentId ? `ref ${e.paymentId}` : 'ledger'}</div>

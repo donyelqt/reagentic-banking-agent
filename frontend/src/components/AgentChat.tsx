@@ -115,20 +115,20 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
   const heroChips = actionChips(isEmployee);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="flex-1 flex flex-col min-h-0">
       <h1 className="sr-only">{isEmployee ? "Reconciliation Console" : "Your Agent"}</h1>
       {isEmployee && (
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 px-4 md:px-8 py-3 border-b border-line bg-surface/40">
           <label className="label" htmlFor="agent-account">Account</label>
           <select id="agent-account" className="field !w-auto" value={account} onChange={(e) => setAccount(e.target.value)}>
             {accountOptions(accounts).map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
           </select>
         </div>
       )}
-      <div className="glass relative rounded-[26px] h-[70vh] flex flex-col overflow-hidden shadow-card">
-        <div ref={scrollRef} className="flex-1 overflow-auto p-5">
+      <div className="relative flex-1 min-h-0 flex flex-col">
+        <div ref={scrollRef} className="flex-1 overflow-auto px-4 md:px-8 py-6">
           {messages.length === 0 ? (
-            <div className="h-full grid place-items-center px-6">
+            <div className="h-full grid place-items-center">
               <div className="w-full max-w-md text-center">
                 <div className="flex justify-center">
                   <div className="hero-brand"><Brand tone="light" /></div>
@@ -146,7 +146,7 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 max-w-3xl mx-auto w-full">
               {messages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} bubble-in`}>
                   {m.role === "user" ? (
@@ -181,7 +181,7 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
         {last && last.pendingSteps.length > 0 && (
           <ApprovalModal steps={last.pendingSteps} accounts={accounts?.length ? accounts : undefined} onApprove={onApprove} onCancel={() => setLast(null)} busy={busy} />
         )}
-        <form onSubmit={onSend} className="flex gap-2 p-3 border-t border-line bg-surface/60">
+        <form onSubmit={onSend} className="flex gap-2 p-3 md:p-4 border-t border-line bg-surface/60">
           <input className="field" value={input} onChange={(e) => setInput(e.target.value)} placeholder={isEmployee ? "Diagnose an account..." : "Ask your agent..."} />
           <button className="btn btn-accent px-5" disabled={busy}>{busy ? "..." : "Send"}</button>
         </form>

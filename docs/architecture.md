@@ -70,3 +70,6 @@ Mutating steps become `pendingSteps` requiring explicit approval; the frontend
 re-calls with the same `plan` + approved `stepIds` and idempotency key.
 `reconcileAccount` (ops) replies with the root cause, a 12-entry evidence
 trail, and a proposed corrective journal entry (not executed).
+
+Architecture decisions (Spring AI + custom harness = ADR-0007, and any other ADRs):
+see [our architecture decision records](../infra/docs/adrs/).

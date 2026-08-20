@@ -24,30 +24,11 @@ public class JwtFilter extends OncePerRequestFilter {
     @Value("${JWT_SECRET}")
     private String jwtSecret;
 
-    @Value("${SERVICE_TOKEN:}")
-    private String serviceToken;
-
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain chain) throws ServletException, IOException {
         if (request.getServletPath().startsWith("/actuator/")) {
-            chain.doFilter(request, response);
-            return;
-        }
-        String path = request.getServletPath();
-        if (("/api/accounts/internal/debit".equals(path) || "/api/accounts/internal/credit".equals(path))
-                && serviceToken != null && !serviceToken.isBlank()
-                && serviceToken.equals(request.getHeader("X-Service-Token"))) {
-            String subject = request.getHeader("X-User-Subject");
-            if (subject == null || subject.isBlank()) {
-                sendError(response, HttpStatus.UNAUTHORIZED, "MISSING_SUBJECT", "X-User-Subject header required");
-                return;
-            }
-            var serviceAuth = new UsernamePasswordAuthenticationToken(
-                    subject, null,
-                    List.of(new SimpleGrantedAuthority("ROLE_SERVICE")));
-            SecurityContextHolder.getContext().setAuthentication(serviceAuth);
             chain.doFilter(request, response);
             return;
         }

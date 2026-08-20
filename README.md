@@ -36,10 +36,13 @@ Evidence-backed posture — what this repo actually does, and what it
 deliberately does not (yet).
 
 **Security (zero internal trust):**
-- Every service ships its own `SecurityConfig` + `JwtFilter` (auth, account,
-  payment, ledger, notification, ai-agent) — the gateway is the entry point,
+- Every service with HTTP endpoints ships its own `SecurityConfig` + `JwtFilter`
+  (auth, account, payment, ledger, ai-agent) — the gateway is the entry point,
   not the trust boundary; a forged or missing token fails at the service it
-  hits.
+  hits. Inter-service mutates (`debit`/`credit`) authenticate with a short-lived
+  signed service JWT (subject-bound, role `SERVICE`); the gateway strips the
+  legacy internal headers (`X-Service-Token`, `X-User-Subject`) from all
+  external requests.
 - Reads are **ownership-scoped at the service layer** (`loadOwned`), not by
   convention: a USER token can never see another customer's accounts.
 - Role gates are enforced at the service layer, not the UI: EMPLOYEE-only
@@ -47,8 +50,12 @@ deliberately does not (yet).
   reject USER tokens with 403; EMPLOYEE tokens cannot move money (transfers
   are denied for ops).
 - Money movement is **approval-gated and idempotent**: mutating agent steps
-  become `pendingSteps` requiring explicit approval, and execution re-calls
-  with the same idempotency key — executed exactly once.
+  become `pendingSteps` requiring explicit approval, execution re-calls with the
+  same idempotency key — executed exactly once. Approval is enforced **at the
+  API boundary**: the ai-agent mints a short-lived signed `TRANSFER`
+  authorization only for an approved `transferFunds` step, and `payment-service`
+  rejects any transfer that does not present it (403) — a direct call to
+  `/api/payments/transfer` cannot skip the approval flow.
 - Money is `BigDecimal` scale 2, serialized as JSON **strings** — no float
   drift, no wire-format ambiguity.
 - Secrets live in environment variables only (`infra/.env.example` is the
@@ -57,7 +64,7 @@ deliberately does not (yet).
   across reloads — a known XSS trade-off, tracked under gaps below.
 
 **Engineering (CI-verified):**
-- 103 unit tests across the Maven reactor, gated by GitHub Actions CI on every
+- 115 unit tests across the Maven reactor, gated by GitHub Actions CI on every
   PR/push to `main`/`donieledev` (compile, tests, frontend typecheck + build,
   production dependency audit) — see ADR-0006.
 - Decisions are recorded, not recalled: ADRs in `infra/docs/adrs/` document
@@ -105,7 +112,7 @@ Each service reads env vars (`JWT_SECRET`, `*_DB_URL`, `KAFKA_BOOTSTRAP_SERVERS`
 
 ## Verify (what CI runs)
 ```bash
-.\mvnw -B test                                    # backend: 103 tests, 8 modules (JDK 17)
+.\mvnw -B test                                    # backend: 115 tests, 8 modules (JDK 17)
 cd frontend && npm ci && npm run typecheck && npm run build   # frontend gates
 ```
 The same gates run in GitHub Actions on every PR/push (see ADR-0006).

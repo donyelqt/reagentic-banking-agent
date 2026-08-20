@@ -7,6 +7,7 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -22,19 +23,29 @@ public class JwtGlobalFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // Defense in depth: internal service-to-service headers are never
+        // accepted from external clients, regardless of the route.
+        ServerHttpRequest cleaned = exchange.getRequest().mutate()
+                .headers(h -> {
+                    h.remove("X-Service-Token");
+                    h.remove("X-User-Subject");
+                })
+                .build();
+        ServerWebExchange exchangeWithCleanedHeaders = exchange.mutate().request(cleaned).build();
+
         String path = exchange.getRequest().getURI().getPath();
         if (path.startsWith("/api/auth/") || path.startsWith("/actuator/")) {
-            return chain.filter(exchange);
+            return chain.filter(exchangeWithCleanedHeaders);
         }
-        String token = JwtUtil.bearer(exchange.getRequest().getHeaders().getFirst("Authorization"));
+        String token = JwtUtil.bearer(exchangeWithCleanedHeaders.getRequest().getHeaders().getFirst("Authorization"));
         if (token == null || token.isBlank()) {
-            return unauthorized(exchange, "MISSING_TOKEN", "Authorization header required");
+            return unauthorized(exchangeWithCleanedHeaders, "MISSING_TOKEN", "Authorization header required");
         }
         try {
             JwtUtil.verify(jwtSecret, token);
-            return chain.filter(exchange);
+            return chain.filter(exchangeWithCleanedHeaders);
         } catch (Exception e) {
-            return unauthorized(exchange, "INVALID_TOKEN", "Token verification failed");
+            return unauthorized(exchangeWithCleanedHeaders, "INVALID_TOKEN", "Token verification failed");
         }
     }
 

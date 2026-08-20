@@ -2,6 +2,9 @@ package dev.reagentic.ai.agent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.reagentic.common.security.JwtUtil;
+import dev.reagentic.common.security.TransferAuthVerifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -20,13 +23,16 @@ public class AgentWorkers {
     private final RestClient ledgerClient;
     private final RestClient paymentClient;
     private final ObjectMapper objectMapper;
+    private final String jwtSecret;
 
     public AgentWorkers(RestClient accountClient, RestClient ledgerClient,
-                        RestClient paymentClient, ObjectMapper objectMapper) {
+                        RestClient paymentClient, ObjectMapper objectMapper,
+                        @Value("${JWT_SECRET}") String jwtSecret) {
         this.accountClient = accountClient;
         this.ledgerClient = ledgerClient;
         this.paymentClient = paymentClient;
         this.objectMapper = objectMapper;
+        this.jwtSecret = jwtSecret;
     }
 
     public JsonNode listAccounts(String token) {
@@ -52,10 +58,12 @@ public class AgentWorkers {
         body.put("destinationAccountId", to);
         body.put("amount", amount);
         body.put("idempotencyKey", idempotencyKey);
+        String transferAuth = mintTransferAuth(token, idempotencyKey);
         try {
             String resp = paymentClient.post()
                     .uri("/api/payments/transfer")
                     .header("Authorization", token)
+                    .header("X-Transfer-Auth", transferAuth)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
@@ -63,6 +71,21 @@ public class AgentWorkers {
             return dataOf(resp);
         } catch (HttpClientErrorException e) {
             throw new RuntimeException("transfer failed: " + extractMessage(e.getResponseBodyAsString()));
+        }
+    }
+
+    private String mintTransferAuth(String token, String idempotencyKey) {
+        try {
+            String raw = JwtUtil.bearer(token);
+            if (raw == null || raw.isBlank()) {
+                throw new RuntimeException("missing caller token");
+            }
+            String subject = JwtUtil.verify(jwtSecret, raw).getSubject();
+            return TransferAuthVerifier.issue(jwtSecret, subject, idempotencyKey);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("unable to authorize transfer");
         }
     }
 

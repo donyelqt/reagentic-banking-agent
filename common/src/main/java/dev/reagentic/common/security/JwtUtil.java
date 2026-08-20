@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Hand-rolled JWT helper (JJWT). The SAME secret is used to sign (auth-service)
@@ -23,14 +24,21 @@ public final class JwtUtil {
     }
 
     public static String issue(String secret, String subject, String role, long ttlMillis) {
+        return issue(secret, subject, role, ttlMillis, null);
+    }
+
+    public static String issue(String secret, String subject, String role, long ttlMillis,
+                               Map<String, Object> extraClaims) {
         long now = System.currentTimeMillis();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(subject)
                 .claim("role", role)
                 .issuedAt(new Date(now))
-                .expiration(new Date(now + ttlMillis))
-                .signWith(key(secret))
-                .compact();
+                .expiration(new Date(now + ttlMillis));
+        if (extraClaims != null) {
+            extraClaims.forEach(builder::claim);
+        }
+        return builder.signWith(key(secret)).compact();
     }
 
     public static Claims verify(String secret, String token) {

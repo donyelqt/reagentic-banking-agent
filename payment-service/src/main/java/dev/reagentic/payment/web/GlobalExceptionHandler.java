@@ -1,6 +1,7 @@
 package dev.reagentic.payment.web;
 
 import dev.reagentic.common.dto.ApiError;
+import dev.reagentic.common.security.TransferForbiddenException;
 import dev.reagentic.payment.service.PaymentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(TransferForbiddenException.class)
+    public ResponseEntity<ApiError> handleTransferForbidden(TransferForbiddenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiError(403, "TRANSFER_UNAUTHORIZED", ex.getMessage()));
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {

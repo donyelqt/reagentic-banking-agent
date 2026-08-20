@@ -6,6 +6,7 @@ import dev.reagentic.common.events.PaymentCompletedEvent;
 import dev.reagentic.common.events.PaymentFailedEvent;
 import dev.reagentic.common.money.Money;
 import dev.reagentic.common.security.JwtUtil;
+import dev.reagentic.common.security.TransferAuthVerifier;
 import dev.reagentic.payment.domain.Outbox;
 import dev.reagentic.payment.domain.Payment;
 import dev.reagentic.payment.domain.PaymentStatus;
@@ -22,13 +23,12 @@ import java.util.Optional;
 @Service
 public class PaymentService {
 
+    private static final long SERVICE_TOKEN_TTL_MILLIS = 60_000L;
+
     private final PaymentRepository paymentRepository;
     private final OutboxRepository outboxRepository;
     private final RestClient accountClient;
     private final ObjectMapper objectMapper;
-
-    @Value("${SERVICE_TOKEN:}")
-    private String serviceToken;
 
     @Value("${JWT_SECRET}")
     private String jwtSecret;
@@ -45,9 +45,14 @@ public class PaymentService {
      * Transfer saga: debit source -> credit destination -> write outbox.
      * Idempotent per transfer key; each leg uses a DISTINCT idempotency key so a
      * retry can never double-apply (debit and credit are never conflated).
+     * The transferAuth token is the server-enforced approval boundary: only the
+     * ai-agent can mint it, only for an approved transferFunds step.
      */
     @Transactional
-    public Payment transfer(String userToken, String source, String dest, Money amount, String transferKey) {
+    public Payment transfer(String userToken, String source, String dest, Money amount, String transferKey,
+                            String transferAuth) {
+        String subject = requireSubject(userToken);
+        TransferAuthVerifier.verify(jwtSecret, transferAuth, subject, transferKey);
         if (source == null || dest == null || source.isBlank() || dest.isBlank()) {
             throw new IllegalArgumentException("Source and destination accounts are required");
         }
@@ -106,21 +111,12 @@ public class PaymentService {
     }
 
     private void callAccount(String path, String accountId, Money amount, String idempotencyKey, String userToken) {
-        String subject = "";
-        try {
-            String raw = JwtUtil.bearer(userToken);
-            if (raw != null && !raw.isBlank()) {
-                subject = JwtUtil.verify(jwtSecret, raw).getSubject();
-            }
-        } catch (Exception e) {
-            // fall back to empty subject; account-service will reject the call
-        }
+        String subject = requireSubject(userToken);
+        String serviceJwt = JwtUtil.issue(jwtSecret, subject, "SERVICE", SERVICE_TOKEN_TTL_MILLIS);
         try {
             var response = accountClient.post()
                     .uri(path)
-                    .header("Authorization", userToken)
-                    .header("X-Service-Token", serviceToken)
-                    .header("X-User-Subject", subject)
+                    .header("Authorization", "Bearer " + serviceJwt)
                     .body(new AccountMutateRequest(accountId, amount.asString(), idempotencyKey))
                     .retrieve()
                     .toBodilessEntity();
@@ -129,6 +125,20 @@ public class PaymentService {
             }
         } catch (RestClientResponseException e) {
             throw new AccountCallException(extractError(e.getResponseBodyAsString()));
+        }
+    }
+
+    private String requireSubject(String userToken) {
+        try {
+            String raw = JwtUtil.bearer(userToken);
+            if (raw == null || raw.isBlank()) {
+                throw new AccountCallException("missing caller token");
+            }
+            return JwtUtil.verify(jwtSecret, raw).getSubject();
+        } catch (AccountCallException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AccountCallException("unable to authorize transfer call");
         }
     }
 

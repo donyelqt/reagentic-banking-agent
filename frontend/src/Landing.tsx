@@ -91,7 +91,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
 
           <footer className="px-6 md:px-10 pb-10 max-w-7xl mx-auto w-full">
             <div className="flex flex-wrap gap-3">
-              {['Text & voice commands', 'Human-approved transfers', 'Real-time immutable ledger'].map((f, i) => (
+              {['Plain-sentence commands', 'Human-approved transfers', 'Real-time immutable ledger'].map((f, i) => (
                 <Reveal key={f} delay={520 + i * 90}>
                   <span className="chip glass-dark !bg-black/40 !text-white/80 !border-white/15">{f}</span>
                 </Reveal>

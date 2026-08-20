@@ -40,7 +40,7 @@ export function Closing({ onEnter }: { onEnter: () => void }) {
           <div>
             <Brand tone="dark" />
             <p className="mt-3 text-white/45 text-sm max-w-xs leading-relaxed">
-              An agentic private bank demo — text & voice commands, human-approved transfers, immutable ledger.
+              An agentic private bank demo — plain-sentence commands, human-approved transfers, immutable ledger.
             </p>
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-7 gap-y-3 text-sm">

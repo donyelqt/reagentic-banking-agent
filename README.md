@@ -16,6 +16,11 @@ backend**. Balances are numbers in PostgreSQL — no real money.
 > repository wins. Verify any claim with the
 > [Verify commands](#verify-what-ci-runs) rather than a copy.
 
+> **No mock data:** the frontend hardcodes nothing — every balance,
+> transaction, ledger row, and reconcile result is **fetched live** from the
+> backend (Postgres + Kafka) over authenticated APIs. The dataset is
+> **demo-seeded** in Postgres (`DataSeeder`), not hardcoded in the UI.
+
 ## Stack
 - **Backend + agent:** Java 17 / Spring Boot 3.5.16 (Maven multi-module monorepo, JDK 17 pinned in CI)
 - **Frontend:** React + Vite + TypeScript + Tailwind

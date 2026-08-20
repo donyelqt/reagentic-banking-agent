@@ -4,6 +4,7 @@ import type { AccountView, AgentResponse } from "../types";
 import ApprovalModal from "./ApprovalModal";
 import { Brand } from "./Brand";
 import { isCapabilityQuestion, capabilityReply, isAnalyzeQuestion, analyzeReply, actionChips, followUpChips } from "../lib/chatPrompts";
+import { maskedId } from "../utils";
 
 interface Msg { role: "user" | "agent"; text: string; chips?: string[] }
 
@@ -11,7 +12,7 @@ function accountOptions(accounts?: AccountView[]) {
   if (!accounts || accounts.length === 0) return [];
   return accounts.map((a) => ({
     id: a.accountId,
-    label: `${a.type.charAt(0).toUpperCase() + a.type.slice(1).toLowerCase()} (${a.accountId})`
+    label: `${a.type.charAt(0).toUpperCase() + a.type.slice(1).toLowerCase()} (${maskedId(a.accountId)})`
   }));
 }
 

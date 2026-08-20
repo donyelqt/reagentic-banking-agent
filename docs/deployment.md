@@ -23,9 +23,10 @@ Applies reduced JVM heap (`-Xmx256m`, agent `-Xmx384m`).
 
 ## Cloud-ready (optional)
 - Postgres → Aiven / Neon via `*.DB_URL` env (no code change).
-- SPA → Cloudflare Pages (`vite build`); expose the gateway via Cloudflare
-  Tunnel. Set `VITE_GATEWAY_URL` to the public gateway URL.
-- Terraform (Azure) is left as an ADR decision (no `terraform apply` in MVP).
+- SPA → Cloudflare Pages (`vite build` with `VITE_GATEWAY_URL` set); expose the gateway via Cloudflare
+  Tunnel. See the ADR-0008 Decision for the required config (CORS, frontend serving, stable URL).
+- Terraform (Azure) is left as an ADR decision (no `terraform apply` in MVP);
+  the deferral is recorded in ADR-0008.
 
 ## Live demo URL plan (status: planned — NOT implemented)
 
@@ -38,14 +39,20 @@ topology with zero code changes. Decision and rationale: see
 stack runs locally via `docker compose` (verified working); no public URL
 exists. The tunnel was never set up.
 
-- **Constraint:** no GCP billing account, so Cloud Run is not available
+- **Constraint:** no active GCP billing account (none exists — and the
+  previous one has expired), so Cloud Run is not available
   (GCP requires an active billing account for Cloud Run even on free tier).
   This is why no cloud deployment exists yet — a billing constraint, not a
   scope decision.
 - **Path 1 — Cloudflare Tunnel (fastest, $0, no account or card):** run
-  `docker compose` from any machine, then a quick tunnel (`trycloudflare.com`
-  for a throwaway URL, or a real domain later) exposes gateway `:8080` +
-  frontend publicly. Works today.
+  `docker compose` from any machine, then a tunnel exposes the app publicly.
+  Not turnkey: `VITE_GATEWAY_URL` must point at the public gateway
+  (baked at build/dev-server start), gateway CORS (`GATEWAY_CORS_ORIGINS`)
+  must allow the tunnel origin, the frontend must be reachable (single tunnel
+  to the dev server on `:5173`, or a Pages build), and a **named tunnel +
+  owned domain** is required for a stable judge-facing URL — quick-tunnel
+  hostnames are random per restart. See the ADR-0008 Decision for the full
+  configuration.
 - **Path 2 — Azure for Students ($100 credit, no credit card):** **attempted
   and rejected** — the UC email is not accepted by the Azure for Students
   program. Not viable unless another eligible email becomes available.

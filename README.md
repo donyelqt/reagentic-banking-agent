@@ -80,7 +80,7 @@ deliberately does not (yet).
 - Auth token persists in `localStorage` for session continuity — an accepted
   XSS trade-off for the demo; a hardened build would move to short-lived
   memory/session tokens.
-- Live deployment — planned but not executed (no cloud billing account; see
+- Live deployment — planned but not executed (no active cloud billing account — none exists and the prior one expired; see
   ADR-0008 and `docs/deployment.md`).
 
 ## Modules

@@ -1,4 +1,4 @@
-# ADR-0008: Demo deployment via Cloudflare Tunnel (no cloud billing account)
+# ADR-0008: Demo deployment via Cloudflare Tunnel (no active cloud billing account)
 
 ## Status
 Accepted
@@ -11,17 +11,16 @@ Doniele (decision-maker & infrastructure owner)
 
 ## Context
 The Cloud Elite internship demo day requires the platform to be reachable at a
-public URL — not just "works on my machine." Competitor teams ship a live GCP
-deployment (Cloud Run + Cloud SQL + Cloud Build triggers). Our stack is fully
-built and CI-green (see ADR-0006) but only ever runs via local `docker compose`
+public URL — not just "works on my machine." Our stack is fully built and
+CI-green (see ADR-0006) but only ever runs via local `docker compose`
 (see ADR-0002) — there is no public endpoint today.
 
 The blocker is a constraint, not a scope choice:
 
 - **GCP is unavailable.** Cloud Run requires an active GCP billing account
-  (required even on the free tier), and no billing account exists. The
-  `infra/terraform/azure` folder is empty for the same reason — no Azure
-  subscription.
+  (required even on the free tier), and none exists — there is no billing
+  account, and the previous one has expired. The `infra/terraform/azure`
+  folder is empty for the same reason — no Azure subscription.
 - **Azure for Students** ($100 credit, no credit card) was attempted and
   **rejected — the UC email is not accepted** by the program.
 - The stack is deliberately cloud-agnostic: every service reads env vars
@@ -29,19 +28,33 @@ The blocker is a constraint, not a scope choice:
   zero code changes.
 
 Requirement: a public HTTPS URL serving the full 7-service stack + Kafka +
-Postgres + frontend, with zero code changes and zero recurring cost, before
-demo day.
+Postgres + frontend, with zero recurring cost, before demo day.
 
 ## Decision
 Run the exact same `docker compose` topology on a host we control and expose it
-through a **Cloudflare Tunnel**:
+through a **Cloudflare Tunnel** — a named tunnel + owned domain for a stable
+judge-facing URL (quick `trycloudflare.com` tunnels get random hostnames per
+restart, so they are only good for throwaway tests).
 
-- Quick tunnel (`trycloudflare.com`) for a throwaway demo URL, or a named
-  tunnel with a real domain for a stable URL.
 - The gateway (`:8080`) and frontend become public; internal services stay on
   the compose network, unreachable from the internet.
-- No code changes, no container rewrite, no provider migration — the demo is
-  the same verified stack that CI tests.
+- No Java code changes, no container rewrite, no provider migration — the demo
+  runs the same verified stack that CI tests. Not turnkey, though: verified
+  against the running stack, the following config is required:
+  - `VITE_GATEWAY_URL` is baked at frontend build / dev-server start
+    (`frontend/src/api.ts`; `frontend/.env` pins `http://localhost:8080`). A
+    remote browser on a public URL would resolve `localhost:8080` against its
+    *own machine* and every API call would die. The frontend must be built or
+    served with `VITE_GATEWAY_URL` pointing at the public gateway.
+  - The gateway's default CORS allows `http://localhost:*` only
+    (`GATEWAY_CORS_ORIGINS`). A two-tunnel setup (frontend and gateway on
+    different public origins) is CORS-blocked unless the gateway is configured
+    with the tunnel origin and restarted.
+  - The frontend is **not containerized** (`infra/docker-compose.yml`); there
+    is no frontend image to tunnel. Workable shapes are: (a) a single tunnel
+    to the dev server on `:5173` (its Vite proxy already forwards `/api` to
+    the gateway), or (b) a `vite build` to Cloudflare Pages with
+    `VITE_GATEWAY_URL` set, plus a tunnel for the gateway.
 
 Status: **planned — NOT implemented.** This ADR records the chosen route and
 the constraint; the tunnel was **not executed** for the 2026-08-20 submission
@@ -50,7 +63,8 @@ the constraint; the tunnel was **not executed** for the 2026-08-20 submission
 
 ## Architecture & Infrastructure Judgement
 - **Why I stand behind this decision.** The constraint is immutable for the
-  demo window (no billing account, rejected student email). Within that
+  demo window (no billing account — none exists and the prior one expired;
+  rejected student email). Within that
   constraint, the tunnel maximizes leverage: it converts an already-verified
   local topology into a live URL in minutes, and it exercises the same
   artifacts the judges care about (auth, Kafka, ledger, agent) rather than a
@@ -68,9 +82,10 @@ the constraint; the tunnel was **not executed** for the 2026-08-20 submission
 ## Alternatives Considered
 
 ### GCP Cloud Run
-- Pros: Managed, serverless, matches what competitors run; scales to zero.
+- Pros: Managed, serverless, scales to zero.
 - Cons: **Requires an active billing account even on free tier** — none
-  exists. This is a hard blocker, not a tradeoff.
+  exists (no billing account; the prior one expired). This is a hard blocker,
+  not a tradeoff.
 - Rejected: Infeasible within the demo window.
 
 ### Azure for Students / Azure ACI
@@ -100,8 +115,7 @@ the constraint; the tunnel was **not executed** for the 2026-08-20 submission
 
 ## Consequences
 - A public HTTPS URL for the full stack before demo day, zero recurring cost,
-  zero code changes — closes the only competitor advantage (live deployment)
-  without touching the engineering that outclasses theirs.
+  no Java code changes — a live deployment of the verified stack.
 - Demo-day uptime depends on the tunnel host; mitigated by keeping the
   compose stack fully reproducible and the tunnel command in the runbook.
 - The tunnel exposes only the gateway and frontend; internal services remain

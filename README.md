@@ -10,6 +10,12 @@ backend**. Balances are numbers in PostgreSQL — no real money.
 
 > Demo users: customer `demo@bank.dev` / `demo1234` (USER) · ops analyst `ops@bank.dev` / `ops1234` (EMPLOYEE). Accounts: Checking `acc-checking-0001` ($1000.00), Savings `acc-savings-0002` ($500.00).
 
+> **Source of truth:** this repository — **backend and frontend** — is the
+> authoritative artifact. External documents (e.g., the submitted Google Doc)
+> may be **outdated** — if they conflict with this README or `docs/`, the
+> repository wins. Verify any claim with the
+> [Verify commands](#verify-what-ci-runs) rather than a copy.
+
 ## Stack
 - **Backend + agent:** Java 17 / Spring Boot 3.5.16 (Maven multi-module monorepo, JDK 17 pinned in CI)
 - **Frontend:** React + Vite + TypeScript + Tailwind

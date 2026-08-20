@@ -11,11 +11,53 @@ backend**. Balances are numbers in PostgreSQL — no real money.
 > Demo users: customer `demo@bank.dev` / `demo1234` (USER) · ops analyst `ops@bank.dev` / `ops1234` (EMPLOYEE). Accounts: Checking `acc-checking-0001` ($1000.00), Savings `acc-savings-0002` ($500.00).
 
 ## Stack
-- **Backend + agent:** Java 21 / Spring Boot 3.3 (Maven multi-module monorepo)
+- **Backend + agent:** Java 17 / Spring Boot 3.5.16 (Maven multi-module monorepo, JDK 17 pinned in CI)
 - **Frontend:** React + Vite + TypeScript + Tailwind
 - **Broker:** Kafka (immutable audit log)
-- **Auth:** hand-rolled JWT (Spring Security + JJWT), zero internal trust
+- **Auth:** JWT (Spring Security + JJWT), **zero internal trust** — every
+  service independently validates the caller JWT; no internal call is trusted
+  by default
 - **Money:** `BigDecimal` scale 2, JSON **strings** on the wire (`"1000.00"`)
+
+## Security & engineering posture
+
+Evidence-backed posture — what this repo actually does, and what it
+deliberately does not (yet).
+
+**Security (zero internal trust):**
+- Every service ships its own `SecurityConfig` + `JwtFilter` (auth, account,
+  payment, ledger, notification, ai-agent) — the gateway is the entry point,
+  not the trust boundary; a forged or missing token fails at the service it
+  hits.
+- Reads are **ownership-scoped at the service layer** (`loadOwned`), not by
+  convention: a USER token can never see another customer's accounts.
+- Role gates are enforced at the service layer, not the UI: EMPLOYEE-only
+  internal endpoints (`/api/accounts/internal/**`, `/api/ledger/internal/**`)
+  reject USER tokens with 403; EMPLOYEE tokens cannot move money (transfers
+  are denied for ops).
+- Money movement is **approval-gated and idempotent**: mutating agent steps
+  become `pendingSteps` requiring explicit approval, and execution re-calls
+  with the same idempotency key — executed exactly once.
+- Money is `BigDecimal` scale 2, serialized as JSON **strings** — no float
+  drift, no wire-format ambiguity.
+- Secrets live in environment variables only (`infra/.env.example` is the
+  template); no credentials, keys, or tokens in the repository or CI.
+- Frontend holds auth tokens in memory, not `localStorage` — no XSS-stealable
+  session storage.
+
+**Engineering (CI-verified):**
+- 95 unit tests across the Maven reactor, gated by GitHub Actions CI on every
+  PR/push to `main`/`donieledev` (compile, tests, frontend typecheck + build,
+  production dependency audit) — see ADR-0006.
+- Decisions are recorded, not recalled: ADRs in `infra/docs/adrs/` document
+  topology (0001), CI/CD (0006), the agent harness (0007), and the deployment
+  plan (0008).
+
+**Known gaps (tracked, not hidden):**
+- Rate limiting (auth and API endpoints) — not yet implemented.
+- Frontend unit tests — not yet present (typecheck + build are gated).
+- Live deployment — planned but not executed (no cloud billing account; see
+  ADR-0008 and `docs/deployment.md`).
 
 ## Modules
 | Module | Port | Responsibility |
@@ -26,8 +68,8 @@ backend**. Balances are numbers in PostgreSQL — no real money.
 | `payment-service` | 8083 | Transfer saga + outbox |
 | `ledger-service` | 8084 | Kafka consumer; append-only log |
 | `notification-service` | 8085 | Kafka consumer; confirmation stub |
-| `ai-agent` | 8086 | EMPLOYEE-only ops console: plan+execute agent over backend tools |
-| `frontend` | 5173 | Login, Dashboard, Transfer (USER) / Reconciliation Console (EMPLOYEE) |
+| `ai-agent` | 8086 | Agent for both roles: USER (personal agent — balances, transactions, supervised transfers) and EMPLOYEE (ops console — reconcile with root-cause evidence, internal reads) |
+| `frontend` | 5173 | Landing, Login, Dashboard (spending insights + activity feed), Transfer (USER) / Ledger Console + reconcile evidence (EMPLOYEE), agent chat for both |
 
 `common/` holds shared `Money`, `JwtUtil`, events, and `DemoConstants`.
 
@@ -46,6 +88,13 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build
 ## Local (bare) dev
 Each service reads env vars (`JWT_SECRET`, `*_DB_URL`, `KAFKA_BOOTSTRAP_SERVERS`,
 `*_SERVICE_URL`). See `infra/.env.example`. `mvnw compile` builds everything.
+
+## Verify (what CI runs)
+```bash
+.\mvnw -B test                                    # backend: 95 tests, 8 modules (JDK 17)
+cd frontend && npm ci && npm run typecheck && npm run build   # frontend gates
+```
+The same gates run in GitHub Actions on every PR/push (see ADR-0006).
 
 ## Two-role access model
 

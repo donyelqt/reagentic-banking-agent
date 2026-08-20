@@ -1,15 +1,25 @@
 import { useState } from "react";
 import { agentChat, classifySpending, getLedger } from "../api";
-import type { AgentResponse } from "../types";
+import type { AccountView, AgentResponse } from "../types";
 import ApprovalModal from "./ApprovalModal";
 import { isCapabilityQuestion, capabilityReply, isAnalyzeQuestion, analyzeReply, introChips, actionChips, followUpChips } from "../lib/chatPrompts";
 
 interface Msg { role: "user" | "agent"; text: string; chips?: string[] }
 
-const ACCOUNTS = [
+const FALLBACK_ACCOUNTS = [
   { id: "acc-checking-0001", label: "Checking (acc-checking-0001)" },
   { id: "acc-savings-0002", label: "Savings (acc-savings-0002)" }
 ];
+
+function accountOptions(accounts?: AccountView[]) {
+  if (accounts && accounts.length > 0) {
+    return accounts.map((a) => ({
+      id: a.accountId,
+      label: `${a.type.charAt(0).toUpperCase() + a.type.slice(1).toLowerCase()} (${a.accountId})`
+    }));
+  }
+  return FALLBACK_ACCOUNTS;
+}
 
 const CUSTOMER_GREETING =
   "Hello! I'm your banking agent. I can check balances, show your transactions, " +
@@ -20,10 +30,10 @@ const OPS_GREETING =
   "Reconciliation Console - diagnose ledger breaks with root-cause evidence. " +
   "Pick an account and ask to reconcile it, e.g. \"reconcile checking\".";
 
-export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmployee: boolean; onAccountsChanged?: () => void }) {
+export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: { isEmployee: boolean; onAccountsChanged?: () => void; accounts?: AccountView[] }) {
   const [messages, setMessages] = useState<Msg[]>([{ role: "agent", text: isEmployee ? OPS_GREETING : CUSTOMER_GREETING }]);
   const [input, setInput] = useState("");
-  const [account, setAccount] = useState(ACCOUNTS[0].id);
+  const [account, setAccount] = useState(accountOptions(accounts)[0].id);
   const [last, setLast] = useState<AgentResponse | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -69,7 +79,8 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
   async function handleAnalyze() {
     setBusy(true);
     try {
-      const lists = await Promise.all(ACCOUNTS.map((a) => getLedger(a.id).then((r: any) => r.data ?? []).catch(() => [])));
+      const opts = accountOptions(accounts);
+      const lists = await Promise.all(opts.map((a) => getLedger(a.id).then((r: any) => r.data ?? []).catch(() => [])));
       const summary = await classifySpending(lists.flat());
       setMessages((m) => [...m, { role: "agent", text: analyzeReply(summary), chips: followUpChips(false, "Analyze my spending") }]);
     } catch {
@@ -92,7 +103,7 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <h1 className="text-4xl mb-1">{isEmployee ? "Reconciliation Console" : "Your Agent"}</h1>
       <p className="text-muted mb-4">
         {isEmployee
@@ -101,13 +112,13 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
       </p>
       {isEmployee && (
         <div className="flex items-center gap-3 mb-4">
-          <label className="label">Account</label>
-          <select className="field !w-auto" value={account} onChange={(e) => setAccount(e.target.value)}>
-            {ACCOUNTS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+          <label className="label" htmlFor="agent-account">Account</label>
+          <select id="agent-account" className="field !w-auto" value={account} onChange={(e) => setAccount(e.target.value)}>
+            {accountOptions(accounts).map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
           </select>
         </div>
       )}
-      <div className="glass relative rounded-[26px] h-[60vh] flex flex-col overflow-hidden shadow-card">
+      <div className="glass relative rounded-[26px] h-[70vh] flex flex-col overflow-hidden shadow-card">
         <div className="flex-1 overflow-auto p-5 space-y-4">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} bubble-in`}>
@@ -139,7 +150,7 @@ export default function AgentChat({ isEmployee, onAccountsChanged }: { isEmploye
           )}
         </div>
           {last && last.pendingSteps.length > 0 && (
-            <ApprovalModal steps={last.pendingSteps} onApprove={onApprove} onCancel={() => setLast(null)} busy={busy} />
+            <ApprovalModal steps={last.pendingSteps} accounts={accounts?.length ? accounts : undefined} onApprove={onApprove} onCancel={() => setLast(null)} busy={busy} />
           )}
         {messages.length === 1 && (
           <div className="px-5 pb-4 pt-2 flex justify-center">

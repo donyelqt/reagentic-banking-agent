@@ -1,16 +1,26 @@
 import { useEffect, useRef } from 'react'
-import type { Step } from '../types'
+import type { AccountView, Step } from '../types'
 
 interface ApprovalModalProps {
   steps: Step[]
   onApprove: () => void
   onCancel: () => void
   busy?: boolean
+  accounts?: AccountView[]
+  backdrop?: 'dark' | 'blur' | 'none'
 }
 
 function toolLabel(tool: string) {
   const spaced = tool.replace(/([A-Z])/g, ' $1')
   return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+}
+
+function labelFor(id: string, accounts?: AccountView[]): string {
+  const match = accounts?.find((a) => a.accountId === id)
+  if (match) {
+    return match.type.charAt(0).toUpperCase() + match.type.slice(1).toLowerCase()
+  }
+  return id
 }
 
 function formatAmount(value: unknown) {
@@ -23,15 +33,17 @@ interface StepDetail {
   amount?: string
 }
 
-function formatStepDetails(args: Step['args']): StepDetail | null {
+function formatStepDetails(args: Step['args'], accounts?: AccountView[]): StepDetail | null {
   try {
     const parsed = typeof args === 'string' ? JSON.parse(args) : args
     if (parsed?.amount) {
-      const route = parsed.from ? `${parsed.from} → ${parsed.to ?? '?'}` : undefined
+      const route = parsed.from
+        ? `${labelFor(parsed.from, accounts)} → ${labelFor(parsed.to ?? '?', accounts)}`
+        : undefined
       return { route, amount: formatAmount(parsed.amount) }
     }
     if (parsed?.accountId) {
-      return { route: String(parsed.accountId) }
+      return { route: labelFor(String(parsed.accountId), accounts) }
     }
   } catch {
     // fall through to the generic label
@@ -39,7 +51,7 @@ function formatStepDetails(args: Step['args']): StepDetail | null {
   return null
 }
 
-export default function ApprovalModal({ steps, onApprove, onCancel, busy }: ApprovalModalProps) {
+export default function ApprovalModal({ steps, onApprove, onCancel, busy, accounts, backdrop = 'dark' }: ApprovalModalProps) {
   const approveRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -52,7 +64,9 @@ export default function ApprovalModal({ steps, onApprove, onCancel, busy }: Appr
       aria-modal="true"
       aria-labelledby="approval-title"
       aria-busy={busy}
-      className="absolute inset-0 z-20 grid place-items-end sm:place-items-center p-3 backdrop-in bg-[#0A0B14]/80"
+      className={`absolute inset-0 z-20 grid place-items-end sm:place-items-center p-3 backdrop-in ${
+        backdrop === 'blur' ? 'bg-white/10 backdrop-blur-sm' : backdrop === 'dark' ? 'bg-[#0A0B14]/80' : ''
+      }`}
       onKeyDown={(e) => { if (e.key === 'Escape' && !busy) onCancel() }}
     >
       <div className="card p-5 w-full max-w-md modal-in shadow-lift">
@@ -63,7 +77,7 @@ export default function ApprovalModal({ steps, onApprove, onCancel, busy }: Appr
         <p className="text-sm text-muted mb-3">The agent prepared these steps. Approve to execute.</p>
         <ul className="space-y-2 mb-4">
           {steps.map((s) => {
-            const detail = formatStepDetails(s.args)
+            const detail = formatStepDetails(s.args, accounts)
             return (
               <li key={s.stepId} className="flex items-center justify-between gap-3 rounded-xl border border-line bg-bg px-3 py-2 text-sm">
                 <span className="font-medium shrink-0">{toolLabel(s.tool)}</span>

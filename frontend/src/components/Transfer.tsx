@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { agentChat } from '../api'
 import type { AccountView, AgentResponse } from '../types'
 import ApprovalModal from './ApprovalModal'
-import { maskedId } from '../utils'
+import { maskedId, formatMoney } from '../utils'
 
 const AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/
 
@@ -18,12 +18,6 @@ function typeLabel(type: string): string {
 function isSupported(type: string): boolean {
   const t = (type || '').toLowerCase()
   return t === 'checking' || t === 'savings'
-}
-
-function formatMoney(value: number | string): string {
-  const n = typeof value === 'string' ? parseFloat(value) : value
-  if (!Number.isFinite(n)) return '$0.00'
-  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function typeWord(type: string): string | null {

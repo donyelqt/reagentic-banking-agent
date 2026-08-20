@@ -97,7 +97,7 @@ services:
       dockerfile: infra/Dockerfile
       args:
         MODULE: account-service
-environment:
+    environment:
       JWT_SECRET: ${JWT_SECRET}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}

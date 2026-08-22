@@ -7,6 +7,7 @@ import Transfer from "./components/Transfer";
 import ActivityPage from "./components/ActivityPage";
 import LedgerConsole from "./components/LedgerConsole";
 import AgentChat from "./components/AgentChat";
+import Settings from "./components/Settings";
 import { Brand } from "./components/Brand";
 import { getAccounts, sessionFromToken } from "./api";
 import type { AccountView } from "./types";
@@ -210,6 +211,7 @@ function AppShell({
               }
             />
             <Route path="/agent" element={<AgentChat isEmployee={isEmployee} accounts={accounts} onAccountsChanged={onAccountsChanged} />} />
+            <Route path="/settings" element={<Settings accounts={accounts} />} />
             <Route
               path="/ops"
               element={

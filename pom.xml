@@ -26,6 +26,7 @@
         <module>ledger-service</module>
         <module>notification-service</module>
         <module>ai-agent</module>
+        <module>transaction-service</module>
         <module>gateway</module>
     </modules>
 

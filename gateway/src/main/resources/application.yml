@@ -45,6 +45,10 @@ spring:
           uri: ${AI_AGENT_URL:http://localhost:8086}
           predicates:
             - Path=/api/agent/**
+        - id: transaction
+          uri: ${TRANSACTION_SERVICE_URL:http://localhost:8087}
+          predicates:
+            - Path=/api/transactions/**
 
 management:
   endpoints:

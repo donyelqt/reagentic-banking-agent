@@ -37,7 +37,7 @@ export default function ActivityPage({ accounts }: { accounts: AccountView[] }) 
     setError(false)
     setVisible(PAGE)
     getLedger(accountId)
-      .then(async (r: any) => {
+      .then(async (r) => {
         if (cancelled) return
         const list: LedgerEntry[] = r.data ?? []
         setEntries(list)

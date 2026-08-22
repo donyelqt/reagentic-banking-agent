@@ -25,8 +25,8 @@ export default function FloatingChat({ accounts, onExpand }: { accounts: Account
   async function send(text: string, body?: any, chips?: string[]) {
     setBusy(true)
     try {
-      const json: any = await agentChat(body ?? { message: text })
-      const data: AgentResponse = json?.data ?? json
+      const json = await agentChat(body ?? { message: text })
+      const data: AgentResponse = json
       setLast(data)
       const reply = data?.reply?.trim()
       if (reply) setMessages((m) => [...m, { role: 'agent', text: reply, chips }])
@@ -55,7 +55,7 @@ export default function FloatingChat({ accounts, onExpand }: { accounts: Account
   async function handleAnalyze() {
     setBusy(true)
     try {
-      const lists = await Promise.all(accounts.map((a) => getLedger(a.accountId).then((r: any) => r.data ?? []).catch(() => [])))
+      const lists = await Promise.all(accounts.map((a) => getLedger(a.accountId).then((r) => r.data ?? []).catch(() => [])))
       const summary = await classifySpending(lists.flat())
       setMessages((m) => [...m, { role: 'agent', text: analyzeReply(summary), chips: followUpChips(false, 'Analyze my spending') }])
     } catch {

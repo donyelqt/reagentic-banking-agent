@@ -35,3 +35,14 @@ frontend/dist/
 
 # Logs
 *.log
+
+# Agent & Skill plugins (local workspace only)
+skills/
+skills-lock.json
+.agents/
+.aider-desk/
+.augment/
+.autohand/
+.bob/
+.claude/
+

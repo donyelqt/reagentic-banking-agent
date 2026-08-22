@@ -20,15 +20,12 @@
 
 > "Sa accounting dalawa yung mostly natatagalan kami noon either yung sa mortgage or yung balancing. Same din sa accounting essentials kaksks."
 
-**On a future horizon:**
-> "Pwede kaya yung customer service? Pero malawak din kasi customer service eh"
-
 **On scope reality:**
 > "Defi pwede din"
 > "Charrot one week lang pala capstone"
 
 ### Job framing
-The acute job is **account reconciliation / balancing** — not transactions, not reporting, but making sure the books match the real money. It shows up in two coursework contexts (mortgage, "Accounting Essentials"), so the pain is repetitive, not one-off. CS is a much bigger surface she floated as a "yes, and..." but also acknowledged scope ("malawang") and that the capstone window is one week ("Charrot").
+The acute job is **account reconciliation / balancing** — not transactions, not reporting, but making sure the books match the real money. It shows up in two coursework contexts (mortgage, "Accounting Essentials"), so the pain is repetitive, not one-off. For customer services is "malawak"
 
 ---
 
@@ -54,7 +51,7 @@ User → "Yung balancing" → reconcile endpoint → LedgerService (idempotent, 
                                       → agent returns delta + reason, awaits approval
 ```
 
-**Non-goals (this capstone):** Full customer-service triage ("malawang") and DEI expansion — both acknowledged but explicitly out of scope for a one-week capstone window. Building the balancing core first; CS/DEI is the next extension.
+**Non-goals (this capstone):** Full customer-service triage ("malawang") and DEFI expansion — both acknowledged but explicitly out of scope for a one-week capstone window. Building the balancing core first; CS/DEI is the next extension.
 
 ## Evidence quality
 - **Quotes:** direct, verbatim, from Khrystelline and Chris in the team GC (interviewed by Doniele Arys Antonio).

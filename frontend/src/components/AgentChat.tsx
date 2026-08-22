@@ -48,8 +48,8 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
   async function send(text: string, body?: any, chips?: string[]) {
     setBusy(true);
     try {
-      const json: any = await agentChat(body ?? { message: text });
-      const data: AgentResponse = json?.data ?? json;
+      const json = await agentChat(body ?? { message: text });
+      const data: AgentResponse = json;
       setLast(data);
       const reply = data?.reply?.trim();
       if (reply) setMessages((m) => [...m, { role: "agent", text: reply, chips }]);
@@ -83,7 +83,7 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
         setMessages((m) => [...m, { role: "agent", text: "I couldn't load your accounts. Try again in a moment." }]);
         return;
       }
-      const lists = await Promise.all(opts.map((a) => getLedger(a.id).then((r: any) => r.data ?? []).catch(() => [])));
+      const lists = await Promise.all(opts.map((a) => getLedger(a.id).then((r) => r.data ?? []).catch(() => [])));
       const summary = await classifySpending(lists.flat());
       setMessages((m) => [...m, { role: "agent", text: analyzeReply(summary), chips: followUpChips(false, "Analyze my spending") }]);
     } catch {
@@ -189,7 +189,9 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
         )}
         <form onSubmit={onSend} className="flex gap-2 p-3 md:p-4 border-t border-line bg-surface/60">
           <input className="field" value={input} onChange={(e) => setInput(e.target.value)} placeholder={isEmployee ? "Diagnose an account..." : "Ask your agent..."} />
-          <button className="btn btn-accent px-5" disabled={busy}>{busy ? "..." : "Send"}</button>
+          <button className="btn btn-accent px-4" disabled={busy} aria-label="Send message">
+            {busy ? "..." : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></svg>}
+          </button>
         </form>
       </div>
     </div>

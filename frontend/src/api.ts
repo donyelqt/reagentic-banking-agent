@@ -159,3 +159,53 @@ export function sessionFromToken(token: string | null): { email: string; role: s
     return null;
   }
 }
+
+export const getUserProfile = () =>
+  req<{ success: boolean; data: any }>("/api/auth/profile");
+
+export const updateUserProfile = (body: { fullName?: string; phone?: string }) =>
+  req<{ success: boolean; data: any }>("/api/auth/profile", {
+    method: "PUT",
+    body: JSON.stringify(body)
+  });
+
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  req<{ success: boolean; data: string }>("/api/auth/password", {
+    method: "PUT",
+    body: JSON.stringify({ currentPassword, newPassword })
+  });
+
+export async function uploadTransactionsCsv(file: File, accountId = "acc-checking-0001") {
+  const token = localStorage.getItem("jwt");
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("accountId", accountId);
+
+  const res = await fetch(API + "/api/transactions/upload", {
+    method: "POST",
+    headers: token ? { Authorization: "Bearer " + token } : {},
+    body: formData
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    let message = text || "HTTP " + res.status;
+    try {
+      const body = JSON.parse(text);
+      message = body?.message ?? body?.error ?? message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  const json = await res.json();
+  return json.data ?? json;
+}
+
+export const getTransactions = (accountId = "acc-checking-0001") =>
+  req<{ success: boolean; data: any[] }>("/api/transactions?accountId=" + accountId);
+
+export const deleteTransactionBatch = (uploadBatchId: string) =>
+  req<{ success: boolean; data: string }>("/api/transactions/batch/" + uploadBatchId, {
+    method: "DELETE"
+  });
+

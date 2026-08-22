@@ -109,3 +109,35 @@ export interface ClassifyTransactionsResponse {
     transactions?: Array<{ category?: string }>;
   };
 }
+
+export interface UserProfile {
+  email: string
+  role: string
+  fullName: string
+  phone: string
+  twoFactorEnabled: boolean
+  theme: string
+  defaultAccount: string
+  currency: string
+}
+
+export interface TransactionRecord {
+  id: string
+  accountId: string
+  transactionDate: string
+  description: string
+  amount: number | string
+  rawCategory?: string
+  category: string
+  uploadBatchId: string
+  createdAt?: string
+}
+
+export interface TransactionUploadResult {
+  uploadBatchId: string
+  rowsParsed: number
+  rowsRejected: number
+  rejectedRowErrors: string[]
+  totalsByCategory: Record<string, number | string>
+  netTotal: number | string
+}

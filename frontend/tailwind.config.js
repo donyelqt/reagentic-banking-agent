@@ -23,8 +23,26 @@ export default {
         soft: '0 1px 2px rgba(20,19,15,.04), 0 4px 14px rgba(20,19,15,.05)',
         card: '0 12px 34px -16px rgba(20,19,15,.22)',
         lift: '0 30px 60px -22px rgba(20,19,15,.34)'
+      },
+      keyframes: {
+        'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'fade-out': { from: { opacity: '1' }, to: { opacity: '0' } },
+        'pop-in': {
+          from: { opacity: '0', transform: 'scale(.96) translateY(-4px)' },
+          to: { opacity: '1', transform: 'scale(1) translateY(0)' }
+        },
+        'pop-out': {
+          from: { opacity: '1', transform: 'scale(1) translateY(0)' },
+          to: { opacity: '0', transform: 'scale(.96) translateY(-4px)' }
+        }
+      },
+      animation: {
+        'fade-in': 'fade-in .16s ease-out',
+        'fade-out': 'fade-out .14s ease-in',
+        'pop-in': 'pop-in .18s cubic-bezier(.21,1,.2,1)',
+        'pop-out': 'pop-out .14s ease-in forwards'
       }
     }
   },
-  plugins: []
+  plugins: [require('tailwindcss-animate')]
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getInternalAccounts, getInternalLedger, reconcileAccount } from '../api'
 import type { AccountView, LedgerEntry, ReconcileResult } from '../types'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 
 const PAGE = 50
 
@@ -100,9 +101,12 @@ export default function LedgerConsole() {
         </div>
         <label className="flex items-center gap-3">
           <span className="label">Account</span>
-          <select className="field !w-auto" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-            {accounts.map((a) => <option key={a.accountId} value={a.accountId}>{a.type} ({a.accountId})</option>)}
-          </select>
+          <Select value={accountId} onValueChange={setAccountId}>
+            <SelectTrigger className="!w-auto" aria-label="Account"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {accounts.map((a) => <SelectItem key={a.accountId} value={a.accountId}>{a.type} ({a.accountId})</SelectItem>)}
+            </SelectContent>
+          </Select>
         </label>
       </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { agentChat, classifySpending, getLedger } from "../api";
 import type { AccountView, AgentResponse } from "../types";
 import ApprovalModal from "./ApprovalModal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Brand } from "./Brand";
 import { isCapabilityQuestion, capabilityReply, isAnalyzeQuestion, analyzeReply, actionChips, followUpChips } from "../lib/chatPrompts";
 
@@ -35,6 +36,11 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
+
+  useEffect(() => {
+    const ids = accountOptions(accounts).map((a) => a.id);
+    if (ids.length > 0 && !ids.includes(account)) setAccount(ids[0]);
+  }, [accounts, account]);
 
   function buildMessage(text: string): string {
     const t = text.trim().toLowerCase();
@@ -122,13 +128,16 @@ export default function AgentChat({ isEmployee, onAccountsChanged, accounts }: {
       {isEmployee && (
         <div className="flex items-center gap-3 px-4 md:px-8 py-3 border-b border-line bg-surface/40">
           <label className="label" htmlFor="agent-account">Account</label>
-          <select id="agent-account" className="field !w-auto" value={account} onChange={(e) => setAccount(e.target.value)} disabled={accountOptions(accounts).length === 0}>
-            {accountOptions(accounts).length === 0 ? (
-              <option value="">Accounts unavailable</option>
-            ) : (
-              accountOptions(accounts).map((a) => <option key={a.id} value={a.id}>{a.label}</option>)
-            )}
-          </select>
+          {accountOptions(accounts).length === 0 ? (
+            <SelectTrigger disabled aria-label="Account"><span className="text-muted">Accounts unavailable</span></SelectTrigger>
+          ) : (
+            <Select value={account} onValueChange={setAccount}>
+              <SelectTrigger className="!w-auto" aria-label="Account"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {accountOptions(accounts).map((a) => <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       )}
       <div className="relative flex-1 min-h-0 flex flex-col">

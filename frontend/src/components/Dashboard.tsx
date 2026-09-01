@@ -5,6 +5,7 @@ import { useCountUp } from '../lib/useCountUp'
 import { formatMoney } from '../utils'
 import { CategoryChart } from './CategoryChart';
 import { SpendingTrendChart } from './SpendingTrendChart';
+import { Mascot } from './mascot/Mascot';
 
 export default function Dashboard({ accounts, onTransfer, onViewAll }: { accounts: AccountView[]; onTransfer: () => void; onViewAll: () => void }) {
   const [allActivity, setAllActivity] = useState<LedgerEntry[]>([])
@@ -35,9 +36,13 @@ export default function Dashboard({ accounts, onTransfer, onViewAll }: { account
   return (
     <div>
       <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
-        <div>
-          <p className="label">Good day, demo</p>
-          <h1 className="text-4xl mt-1">Your accounts</h1>
+        <div className="flex items-end gap-4">
+          <Mascot size={88} className="shrink-0" />
+          <div>
+            <p className="label">Good day, demo</p>
+            <h1 className="text-4xl mt-1">Your accounts</h1>
+            <p className="text-sm text-muted mt-1">Sage is watching your money.</p>
+          </div>
         </div>
         <button onClick={onTransfer} className="btn btn-accent">New transfer</button>
       </div>

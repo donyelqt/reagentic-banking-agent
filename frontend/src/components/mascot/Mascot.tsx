@@ -15,7 +15,7 @@ import type { CSSProperties } from "react";
  */
 
 type Tone = "light" | "dark";
-type Mood = "idle" | "wave" | "celebrate";
+export type Mood = "idle" | "wave" | "celebrate";
 
 type Props = {
   size?: number;
@@ -26,6 +26,7 @@ type Props = {
   style?: CSSProperties;
   /** Optional id used to scope <style> when multiple mascots appear on one page. */
   uid?: string;
+  onClick?: () => void;
 };
 
 const REAGENTIC_BLUE = "#2D43F5";
@@ -39,6 +40,7 @@ export function Mascot({
   title = "Reagentic mascot",
   style,
   uid,
+  onClick,
 }: Props) {
   // Stable id so multiple mascots on one page do not collide on their <style>.
   const id = uid ?? "mascot";
@@ -63,8 +65,9 @@ export function Mascot({
       role="img"
       aria-label={title}
       className={`reagentic-mascot ${className ?? ""}`}
-      style={style}
       data-mood={mood}
+      onClick={onClick}
+      style={{ ...(onClick ? { cursor: "pointer" } : null), ...style } as any}
     >
       <title>{title}</title>
       <defs>
@@ -98,24 +101,30 @@ export function Mascot({
           /* Head tilt — 6s, desynced from breathe */
           .${id}-head  { transform-origin: 120px  90px; transform-box: fill-box; animation: ${id}-tilt 6s ease-in-out infinite; }
           /* Eyelid: parked above disc when open (-48px), drops to cover disc when closed (28px). y=32 h=48 → open: -48 → y -16 (above 60), closed: 28 → y 60 (covers 60-108) */
-          .${id}-lid-l, .${id}-lid-r { transform: translateY(-48px); animation: ${id}-blink 5.2s steps(1,end) infinite; }
-          /* Right arm — idle rests, wave lifts */
-          .${id}-right-arm { transform-origin: 86px 158px; transform-box: fill-box; }
+          .${id}-lid-l, .${id}-lid-r { transform: translateY(0); animation: ${id}-blink 5.2s steps(1,end) infinite; }
+          /* Right arm — lift is transition (no teleport), wag is animation on inner group */
+          .${id}-right-arm { transform-origin: 86px 152px; transform-box: view-box; transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1); }
+          .${id}-right-arm-wag { transform-origin: 86px 152px; transform-box: view-box; }
 
           /* Mood overrides */
           [data-mood="celebrate"] .${id}-scene { animation: ${id}-hop .9s ease-in-out 1; }
-          [data-mood="wave"] .${id}-right-arm { animation: ${id}-wave 1.15s cubic-bezier(0.34,1.56,0.64,1) infinite; }
+          [data-mood="wave"] .${id}-right-arm { transform: rotate(120deg); transform-origin: 86px 152px; } // raised high so hello is obvious
+          [data-mood="wave"] .${id}-right-arm-wag { animation: ${id}-wave-wag 0.9s ease-in-out infinite; }
+          [data-mood="wave"] .${id}-scene { animation: ${id}-wave-bounce 0.9s ease-in-out infinite; }
 
           @keyframes ${id}-breathe { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-1.1px) scale(1.008); } }
           @keyframes ${id}-tilt    { 0%,100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
           /* Blink — 95% open, 2% closed snap, no lid drift */
-          @keyframes ${id}-blink   { 0%,92%,98%,100% { transform: translateY(-48px); } 94% { transform: translateY(28px); } 96% { transform: translateY(-48px); } }
+          @keyframes ${id}-blink   { 0%,92%,98%,100% { transform: translateY(0); } 94% { transform: translateY(46px); } 96% { transform: translateY(0); } }
           @keyframes ${id}-hop     { 0%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } 60% { transform: translateY(0); } }
           /* Wave — friendly & energetic: right hand (left holds wallet), big arc from shoulder with overshoot, 1.2s */
-          @keyframes ${id}-wave    { 0% { transform: rotate(-74deg) scale(1); } 15% { transform: rotate(-96deg) scale(1.02); } 30% { transform: rotate(-58deg) scale(1); } 45% { transform: rotate(-92deg) scale(1.02); } 65% { transform: rotate(-62deg); } 85% { transform: rotate(-88deg); } 100% { transform: rotate(-74deg) scale(1); } }
+          /* Hello wag — inner wags ±14deg around lifted 85deg */
+          @keyframes ${id}-wave-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+          /* Hello wag — inner group wags ±8deg around lifted 72deg, no teleport */
+          @keyframes ${id}-wave-wag { 0% { transform: rotate(0); } 20% { transform: rotate(16deg); } 40% { transform: rotate(-14deg); } 60% { transform: rotate(15deg); } 80% { transform: rotate(-12deg); } 100% { transform: rotate(0); } } // bigger wag 30deg total
 
           @media (prefers-reduced-motion: reduce) {
-            .${id}-scene, .${id}-head, .${id}-lid-l, .${id}-lid-r, .${id}-coin, .${id}-left-arm, .${id}-right-arm {
+            .${id}-scene, .${id}-head, .${id}-lid-l, .${id}-lid-r, .${id}-left-arm, .${id}-right-arm, .${id}-right-arm-wag {
               animation: none !important;
             }
           }
@@ -198,18 +207,6 @@ export function Mascot({
           </g>
         </g>
 
-        {/* Right arm - class drives the wave pose. In idle it rests; in wave it lifts up. */}
-        <g className={`${id}-right-arm`}>
-          <path
-            d="M82 150 C 66 152 56 168 60 184 C 64 196 78 196 84 186 C 88 176 88 166 86 158 Z"
-            fill={bodyShade}
-            stroke={outline}
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-          />
-          <circle cx="68" cy="186" r="9" fill={hand} stroke={outline} strokeWidth="2" />
-        </g>
-
         {/* Head - drawn before ear tufts so the tufts sit on top */}
         <g className={`${id}-head`}>
           <path
@@ -231,7 +228,7 @@ export function Mascot({
             <circle cx="96" cy="84" r="5"  fill={outline} />
             <circle cx="100" cy="80" r="2.6" fill={belly} />
             <circle cx="92"  cy="89" r="1.4" fill={belly} opacity="0.7" />
-            <rect className={`${id}-lid-l`} x="72" y="32" width="48" height="48" fill={bodyFill} />
+            <rect className={`${id}-lid-l`} x="72" y="14" width="48" height="40" fill={bodyFill} />
           </g>
           <circle cx="144" cy="82" r="22" fill={belly} stroke={outline} strokeWidth="2.5" />
           <g clipPath={`url(#${id}-eye-r-clip)`}>
@@ -239,7 +236,7 @@ export function Mascot({
             <circle cx="144" cy="84" r="5"  fill={outline} />
             <circle cx="148" cy="80" r="2.6" fill={belly} />
             <circle cx="140" cy="89" r="1.4" fill={belly} opacity="0.7" />
-            <rect className={`${id}-lid-r`} x="120" y="32" width="48" height="48" fill={bodyFill} />
+            <rect className={`${id}-lid-r`} x="120" y="14" width="48" height="40" fill={bodyFill} />
           </g>
 
           {/* Beak */}
@@ -254,6 +251,20 @@ export function Mascot({
           <path d="M130 64 q14 -6 28 0" stroke={outline} strokeWidth="2.5" strokeLinecap="round" fill="none" />
 
           
+        </g>
+
+        {/* Right arm — on top of head so hello wave stays visible, not hiding behind */}
+        <g className={`${id}-right-arm`}>
+          <g className={`${id}-right-arm-wag`}>
+          <path
+            d="M82 150 C 66 152 56 168 60 184 C 64 196 78 196 84 186 C 88 176 88 166 86 158 Z"
+            fill={bodyShade}
+            stroke={outline}
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+          />
+          <circle cx="68" cy="186" r="9" fill={hand} stroke={outline} strokeWidth="2" />
+          </g>
         </g>
       </g>
     </svg>

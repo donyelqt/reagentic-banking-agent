@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getLedger, downloadStatementCsv, downloadStatementExcel, classifySpending } from '../api'
 import type { AccountView, CategorySpend, LedgerEntry } from '../types'
 import { useCountUp } from '../lib/useCountUp'
 import { formatMoney } from '../utils'
 import { CategoryChart } from './CategoryChart';
 import { SpendingTrendChart } from './SpendingTrendChart';
-import { Mascot } from './mascot/Mascot';
+import { Mascot, type Mood } from './mascot/Mascot';
 
 export default function Dashboard({ accounts, onTransfer, onViewAll }: { accounts: AccountView[]; onTransfer: () => void; onViewAll: () => void }) {
   const [allActivity, setAllActivity] = useState<LedgerEntry[]>([])
@@ -14,6 +14,8 @@ export default function Dashboard({ accounts, onTransfer, onViewAll }: { account
   const [classifyError, setClassifyError] = useState(false)
   const [dlError, setDlError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mood, setMood] = useState<Mood>("wave") // fresh refresh = hello immediately, no 1min wait
+  const moodTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -33,11 +35,34 @@ export default function Dashboard({ accounts, onTransfer, onViewAll }: { account
     return () => { cancelled = true }
   }, [accounts])
 
+  // Autonomous Sage — idle baseline, wave every 8-14s for 2.2s, respects reduced-motion (taste: MOTION 6, not 9)
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    let cancelled = false;
+    const schedule = () => {
+      const delay = 2500 + Math.random() * 1500; // 2.5-4s — you see it constantly
+      moodTimeoutRef.current = window.setTimeout(() => {
+        if (cancelled) return;
+        setMood("wave");
+        window.setTimeout(() => { if (!cancelled) setMood("idle"); }, 2000);
+        schedule();
+      }, delay);
+    };
+    const initial = window.setTimeout(() => { // immediate hello // hello 0.8s after mount
+      if (cancelled) return;
+      setMood("wave");
+      window.setTimeout(() => { if (!cancelled) setMood("idle"); }, 2600);
+      schedule();
+    }, 500); // first hello at 0.5s
+    return () => { cancelled = true; window.clearTimeout(initial); if (moodTimeoutRef.current) window.clearTimeout(moodTimeoutRef.current); };
+  }, [])
+
   return (
     <div>
       <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
         <div className="flex items-end gap-4">
-          <Mascot size={88} className="shrink-0" />
+          <Mascot size={110} mood={mood} className="shrink-0 cursor-pointer hover:scale-[1.03] transition-transform drop-shadow-sm" title="Click Sage to wave! 👋" onClick={() => { setMood("wave"); setTimeout(() => setMood("idle"), 2200); }} />
           <div>
             <p className="label">Good day, demo</p>
             <h1 className="text-4xl mt-1">Your accounts</h1>

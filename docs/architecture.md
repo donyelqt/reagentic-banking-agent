@@ -67,8 +67,8 @@ graph LR
     A5 -->|"Bearer user JWT (copied)"| A4
     A3 -->|"Bearer SERVICE JWT<br/>sub=user, role=SERVICE<br/>short-lived, JWT_SECRET"| A2
 
-    style A3 fill:#fef3c7,stroke:#d97706
-    style GW2 fill:#dbeafe,stroke:#2563eb
+    style A3 fill:#f59e0b,stroke:#b45309,color:#fff,stroke-width:2px
+    style GW2 fill:#2563eb,stroke:#1e40af,color:#fff,stroke-width:2px
 ```
 
 `/api/agent/**` serves **both** roles with a per-role tool matrix enforced in the
@@ -92,9 +92,9 @@ graph TD
     Exec -->|EMPLOYEE| E2["reconcileAccount<br/>evidence 12 + journal entry"]
     Exec -.->|denied| D1["USER → reconcileAccount<br/>EMPLOYEE → transferFunds"]
 
-    style D1 fill:#fee2e2,stroke:#dc2626
-    style U2 fill:#dcfce7,stroke:#16a34a
-    style E2 fill:#dcfce7,stroke:#16a34a
+    style D1 fill:#dc2626,stroke:#991b1b,color:#fff,stroke-width:2px
+    style U2 fill:#16a34a,stroke:#15803d,color:#fff,stroke-width:2px
+    style E2 fill:#16a34a,stroke:#15803d,color:#fff,stroke-width:2px
 ```
 
 The agent''s internal reads (`/api/accounts/internal/**`, `/api/ledger/internal/**`)
@@ -208,8 +208,8 @@ graph LR
 
     Kw -.->|always available| Plan2
 
-    style Llm fill:#dbeafe,stroke:#2563eb
-    style Kw fill:#fef3c7,stroke:#d97706
+    style Llm fill:#2563eb,stroke:#1e40af,color:#fff,stroke-width:2px
+    style Kw fill:#f59e0b,stroke:#b45309,color:#fff,stroke-width:2px
 ```
 
 One agent, two role surfaces. Primary planner is `LlmPlanner` using Spring AI''s
@@ -231,3 +231,4 @@ trail, and a proposed corrective journal entry (not executed).
 
 Architecture decisions (Spring AI + custom harness = ADR-0007, and any other ADRs):
 see [our architecture decision records](../infra/docs/adrs/).
+

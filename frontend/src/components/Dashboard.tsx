@@ -1,61 +1,56 @@
-import { useEffect, useRef, useState } from 'react'
-import { getLedger, downloadStatementCsv, downloadStatementExcel, classifySpending } from '../api'
-import type { AccountView, CategorySpend, LedgerEntry } from '../types'
-import { useCountUp } from '../lib/useCountUp'
-import { formatMoney } from '../utils'
-import { CategoryChart } from './CategoryChart';
-import { SpendingTrendChart } from './SpendingTrendChart';
-import { Mascot, type Mood } from './mascot/Mascot';
+import { useEffect, useRef, useState, useMemo } from "react"
+import { downloadStatementCsv, downloadStatementExcel, classifySpending } from "../api"
+import type { AccountView, CategorySpend, LedgerEntry } from "../types"
+import { useCountUp } from "../lib/useCountUp"
+import { formatMoney } from "../utils"
+import { CategoryChart } from "./CategoryChart"
+import { SpendingTrendChart } from "./SpendingTrendChart"
+import { Mascot, type Mood } from "./mascot/Mascot"
+import { useAllLedgers } from "../lib/queries"
+import { useQuery } from "@tanstack/react-query"
 
 export default function Dashboard({ accounts, onTransfer, onViewAll }: { accounts: AccountView[]; onTransfer: () => void; onViewAll: () => void }) {
-  const [allActivity, setAllActivity] = useState<LedgerEntry[]>([])
-  const [activity, setActivity] = useState<LedgerEntry[]>([])
-  const [categorySummary, setCategorySummary] = useState<CategorySpend[] | null>(null)
-  const [classifyError, setClassifyError] = useState(false)
   const [dlError, setDlError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [mood, setMood] = useState<Mood>("wave") // fresh refresh = hello immediately, no 1min wait
+  const [mood, setMood] = useState<Mood>("wave")
   const moodTimeoutRef = useRef<number | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    Promise.all(accounts.map((a) => getLedger(a.accountId).then((r) => r.data ?? []).catch(() => [])))
-      .then((lists) => {
-        if (cancelled) return
-        const all = lists.flat().sort((a: LedgerEntry, b: LedgerEntry) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
-        setAllActivity(all)
-        setActivity(all.slice(0, 6))
-        return all
-      })
-      .then((all) => {
-        if (cancelled || !all) return
-        classifySpending(all).then(setCategorySummary).catch(() => { if (!cancelled) setClassifyError(true) })
-      })
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [accounts])
+  const { data: rawLedgers, isLoading: ledgersLoading } = useAllLedgers(accounts, !!accounts.length)
+  const allActivity = useMemo(() => {
+    const all = [...(rawLedgers ?? [])].sort((a: LedgerEntry, b: LedgerEntry) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+    return all
+  }, [rawLedgers])
+  const activity = useMemo(() => allActivity.slice(0, 6), [allActivity])
+  const loading = ledgersLoading && allActivity.length === 0
 
-  // Autonomous Sage — idle baseline, wave every 8-14s for 2.2s, respects reduced-motion (taste: MOTION 6, not 9)
+  const classifyKey = allActivity.length > 0 ? allActivity.map((e) => e.entryId).join(",").slice(0, 200) : ""
+  const { data: categorySummary = null, isError: classifyError, refetch: refetchClassify } = useQuery<CategorySpend[] | null>({
+    queryKey: ["classify", classifyKey],
+    queryFn: () => classifySpending(allActivity).catch(() => null),
+    enabled: allActivity.length > 0,
+    staleTime: 60_000,
+  })
+
   useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
-    let cancelled = false;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    if (reduce) return
+    let cancelled = false
+    const toIdle = window.setTimeout(() => { if (!cancelled) setMood("idle") }, 2200)
     const schedule = () => {
-      const delay = 2500 + Math.random() * 1500; // 2.5-4s — you see it constantly
+      const delay = 2500 + Math.random() * 1500
       moodTimeoutRef.current = window.setTimeout(() => {
-        if (cancelled) return;
-        setMood("wave");
-        window.setTimeout(() => { if (!cancelled) setMood("idle"); }, 2000);
-        schedule();
-      }, delay);
-    };
-    const initial = window.setTimeout(() => { // immediate hello // hello 0.8s after mount
-      if (cancelled) return;
-      setMood("wave");
-      window.setTimeout(() => { if (!cancelled) setMood("idle"); }, 2600);
-      schedule();
-    }, 500); // first hello at 0.5s
-    return () => { cancelled = true; window.clearTimeout(initial); if (moodTimeoutRef.current) window.clearTimeout(moodTimeoutRef.current); };
+        if (cancelled) return
+        setMood("wave")
+        window.setTimeout(() => { if (!cancelled) setMood("idle") }, 2000)
+        schedule()
+      }, delay)
+    }
+    const initial = window.setTimeout(() => {
+      if (cancelled) return
+      setMood("wave")
+      window.setTimeout(() => { if (!cancelled) setMood("idle") }, 2600)
+      schedule()
+    }, 500)
+    return () => { cancelled = true; window.clearTimeout(toIdle); window.clearTimeout(initial); if (moodTimeoutRef.current) window.clearTimeout(moodTimeoutRef.current) }
   }, [])
 
   return (
@@ -79,12 +74,8 @@ export default function Dashboard({ accounts, onTransfer, onViewAll }: { account
       <div className="grid lg:grid-cols-2 gap-6 mt-6">
         <CategoryChart
           summary={categorySummary}
-          error={classifyError}
-          onRetry={() => {
-            setCategorySummary(null)
-            setClassifyError(false)
-            classifySpending(allActivity).then(setCategorySummary).catch(() => setClassifyError(true))
-          }}
+          error={!!classifyError}
+          onRetry={() => refetchClassify()}
         />
         <SpendingTrendChart data={allActivity} loading={loading} />
       </div>
@@ -114,10 +105,10 @@ export default function Dashboard({ accounts, onTransfer, onViewAll }: { account
 }
 
 function AccountCard({ account, index, onDownloadError }: { account: AccountView; index: number; onDownloadError: (msg: string | null) => void }) {
-  const num = useCountUp(parseFloat(account.balance || '0'))
+  const num = useCountUp(parseFloat(account.balance || "0"))
   const run = (fn: () => Promise<void>, label: string) => {
     onDownloadError(null)
-    fn().catch(() => onDownloadError(`Couldn't download ${label}. Try again.`))
+    fn().catch(() => onDownloadError(`Couldn\u0027t download ${label}. Try again.`))
   }
   return (
     <div className="card p-6 view-in" style={{ animationDelay: `${index * 80}ms` }}>
@@ -128,14 +119,14 @@ function AccountCard({ account, index, onDownloadError }: { account: AccountView
       <div className="mt-5 font-display text-4xl">{formatMoney(num)}</div>
       <div className="mt-6 flex items-center justify-end gap-2">
         <button
-          onClick={() => run(() => downloadStatementCsv(account.accountId), 'CSV')}
+          onClick={() => run(() => downloadStatementCsv(account.accountId), "CSV")}
           className="text-xs font-medium text-[#8A6D1A] bg-gold/15 hover:bg-gold/25 px-3 py-1.5 rounded-full transition-colors"
           title="Download statement as plain CSV"
         >
           CSV
         </button>
         <button
-          onClick={() => run(() => downloadStatementExcel(account.accountId), 'Excel')}
+          onClick={() => run(() => downloadStatementExcel(account.accountId), "Excel")}
           className="text-xs font-medium text-accent bg-accent/10 hover:bg-accent/20 px-3 py-1.5 rounded-full transition-colors"
           title="Download the same statement as a styled Excel workbook"
         >
@@ -147,21 +138,21 @@ function AccountCard({ account, index, onDownloadError }: { account: AccountView
 }
 
 function ActivityRow({ e }: { e: LedgerEntry }) {
-  const credit = e.type === 'CREDIT' || e.type === 'OPENING'
-  const label = e.type === 'OPENING' ? 'Opening balance' : e.type === 'DEBIT' ? 'Transfer out' : e.type === 'CREDIT' ? 'Transfer in' : e.type
-  const amt = parseFloat(e.signedAmount || '0')
-  const formatted = (credit ? '+' : '−') + formatMoney(amt)
-  const date = new Date(e.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const credit = e.type === "CREDIT" || e.type === "OPENING"
+  const label = e.type === "OPENING" ? "Opening balance" : e.type === "DEBIT" ? "Transfer out" : e.type === "CREDIT" ? "Transfer in" : e.type
+  const amt = parseFloat(e.signedAmount || "0")
+  const formatted = (credit ? "+" : "−") + formatMoney(amt)
+  const date = new Date(e.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
   return (
     <li className="py-3.5 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <span aria-hidden="true" className={`w-9 h-9 rounded-full grid place-items-center ${credit ? 'bg-[rgba(11,138,99,.12)] text-pos' : 'bg-[rgba(201,50,60,.12)] text-neg'}`}>{credit ? '↑' : '↓'}</span>
+        <span aria-hidden="true" className={`w-9 h-9 rounded-full grid place-items-center ${credit ? "bg-[rgba(11,138,99,.12)] text-pos" : "bg-[rgba(201,50,60,.12)] text-neg"}`}>{credit ? "↑" : "↓"}</span>
         <div>
           <div className="text-sm font-medium">{label}</div>
-          <div className="text-xs text-muted">{date} · {e.paymentId ? `ref ${e.paymentId}` : 'ledger'}</div>
+          <div className="text-xs text-muted">{date} · {e.paymentId ? `ref ${e.paymentId}` : "ledger"}</div>
         </div>
       </div>
-      <div className={`font-display ${credit ? 'text-pos' : 'text-neg'}`}>{formatted}</div>
+      <div className={`font-display ${credit ? "text-pos" : "text-neg"}`}>{formatted}</div>
     </li>
   )
 }

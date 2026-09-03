@@ -8,7 +8,8 @@ import ActivityPage from "./components/ActivityPage";
 import LedgerConsole from "./components/LedgerConsole";
 import AgentChat from "./components/AgentChat";
 import { Brand } from "./components/Brand";
-import { getAccounts, sessionFromToken } from "./api";
+import { sessionFromToken } from "./api";
+import { useAccounts, qk, queryClient } from "./lib/queries";
 import type { AccountView } from "./types";
 import FloatingChat from "./components/FloatingChat";
 import { Sidebar, SidebarNav, MenuIcon } from "./components/Sidebar/Sidebar";
@@ -19,28 +20,26 @@ export default function App() {
   const initialToken = localStorage.getItem("jwt");
   const [stage, setStage] = useState<Stage>(initialToken ? "app" : "landing");
   const [token, setToken] = useState<string | null>(initialToken);
-  const [accounts, setAccounts] = useState<AccountView[]>([]);
   const session = sessionFromToken(token);
   const role = session?.role ?? "USER";
   const isEmployee = role === "EMPLOYEE";
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("sidebar-collapsed") === "1");
-
-  useEffect(() => {
-    if (!token || stage !== "app") return;
-    getAccounts().then((r) => setAccounts(r.data ?? [])).catch(() => setAccounts([]));
-  }, [token, stage]);
+  const { data: accounts = [] } = useAccounts(!!token && stage === "app");
 
   function logout() {
     localStorage.removeItem("jwt");
     setToken(null);
-    setAccounts([]);
+    queryClient.removeQueries({ queryKey: qk.accounts });
+    queryClient.removeQueries({ queryKey: ["ledger"] });
     setDrawerOpen(false);
     setStage("landing");
   }
 
   function refreshAccounts() {
-    getAccounts().then((r) => setAccounts(r.data ?? [])).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: qk.accounts });
+    queryClient.invalidateQueries({ queryKey: ["ledger"] });
+    queryClient.invalidateQueries({ queryKey: ["classify"] });
   }
 
   if (stage === "landing") return <Landing onEnter={() => setStage("app")} />;

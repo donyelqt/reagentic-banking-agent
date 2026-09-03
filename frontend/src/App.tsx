@@ -39,6 +39,8 @@ export default function App() {
   function refreshAccounts() {
     queryClient.invalidateQueries({ queryKey: qk.accounts });
     queryClient.invalidateQueries({ queryKey: ["ledger"] });
+    queryClient.invalidateQueries({ queryKey: ["internalLedger"] });
+    queryClient.invalidateQueries({ queryKey: qk.internalAccounts });
     queryClient.invalidateQueries({ queryKey: ["classify"] });
   }
 

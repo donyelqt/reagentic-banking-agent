@@ -1,5 +1,5 @@
 import { QueryClient, useQuery, useQueries } from "@tanstack/react-query";
-import { getAccounts, getLedger } from "../api";
+import { getAccounts, getLedger, getInternalLedger, getInternalAccounts } from "../api";
 import type { AccountView } from "../types";
 
 export const queryClient = new QueryClient({
@@ -16,13 +16,42 @@ export const queryClient = new QueryClient({
 
 export const qk = {
   accounts: ["accounts"] as const,
+  internalAccounts: ["internalAccounts"] as const,
   ledger: (accountId: string) => ["ledger", accountId] as const,
+  internalLedger: (accountId: string) => ["internalLedger", accountId] as const,
 } as const;
 
 export function useAccounts(enabled = true) {
   return useQuery({
     queryKey: qk.accounts,
     queryFn: () => getAccounts().then((r) => r.data ?? []),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useLedger(accountId: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.ledger(accountId),
+    queryFn: () => getLedger(accountId).then((r) => r.data ?? []),
+    enabled: enabled && !!accountId,
+    staleTime: 15_000,
+  });
+}
+
+export function useInternalLedger(accountId: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.internalLedger(accountId),
+    queryFn: () => getInternalLedger(accountId).then((r) => r.data ?? []),
+    enabled: enabled && !!accountId,
+    staleTime: 15_000,
+  });
+}
+
+export function useInternalAccounts(enabled = true) {
+  return useQuery({
+    queryKey: qk.internalAccounts,
+    queryFn: () => getInternalAccounts().then((r) => r.data ?? []),
     enabled,
     staleTime: 30_000,
   });

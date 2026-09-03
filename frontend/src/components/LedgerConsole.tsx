@@ -1,71 +1,50 @@
-import { useEffect, useState } from 'react'
-import { getInternalAccounts, getInternalLedger, reconcileAccount } from '../api'
-import type { AccountView, LedgerEntry, ReconcileResult } from '../types'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { useState, useEffect } from "react"
+import { reconcileAccount } from "../api"
+import type { LedgerEntry, ReconcileResult } from "../types"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
+import { useInternalAccounts, useInternalLedger } from "../lib/queries"
 
 const PAGE = 50
 
 function money(v: number): string {
-  const abs = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  return (v < 0 ? '−' : '') + '$' + abs
+  const abs = Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return (v < 0 ? "−" : "") + "$" + abs
 }
 
 function typeLabel(type: string): string {
-  return type === 'OPENING' ? 'Opening balance'
-    : type === 'DEBIT' ? 'Transfer out'
-    : type === 'CREDIT' ? 'Transfer in'
+  return type === "OPENING" ? "Opening balance"
+    : type === "DEBIT" ? "Transfer out"
+    : type === "CREDIT" ? "Transfer in"
     : type
 }
 
 function typeChipClass(type: string): string {
-  return type === 'OPENING' ? 'text-muted bg-line/60'
-    : type === 'CREDIT' ? 'text-pos bg-[rgba(12,166,120,.12)]'
-    : 'text-neg bg-[rgba(229,72,77,.12)]'
+  return type === "OPENING" ? "text-muted bg-line/60"
+    : type === "CREDIT" ? "text-pos bg-[rgba(12,166,120,.12)]"
+    : "text-neg bg-[rgba(229,72,77,.12)]"
 }
 
 export default function LedgerConsole() {
-  const [accounts, setAccounts] = useState<AccountView[]>([])
-  const [accountsReady, setAccountsReady] = useState(false)
-  const [accountId, setAccountId] = useState('')
-  const [entries, setEntries] = useState<LedgerEntry[]>([])
+  const { data: accounts = [], isLoading: accountsLoading } = useInternalAccounts()
+  const [accountId, setAccountId] = useState("")
   const [visible, setVisible] = useState(PAGE)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-  const [reload, setReload] = useState(0)
   const [recon, setRecon] = useState<ReconcileResult | null>(null)
   const [reconciling, setReconciling] = useState(false)
   const [reconError, setReconError] = useState<string | null>(null)
 
   useEffect(() => {
-    let cancelled = false
-    getInternalAccounts()
-      .then((r) => {
-        if (cancelled) return
-        const list: AccountView[] = r.data ?? []
-        setAccounts(list)
-        setAccountId((prev) => (list.some((a) => a.accountId === prev) ? prev : (list[0]?.accountId ?? '')))
-      })
-      .catch(() => { if (!cancelled) setAccounts([]) })
-      .finally(() => { if (!cancelled) setAccountsReady(true) })
-    return () => { cancelled = true }
-  }, [])
+    if (accounts.length > 0 && !accounts.some((a) => a.accountId === accountId)) {
+      setAccountId(accounts[0].accountId)
+    }
+  }, [accounts, accountId])
 
-  useEffect(() => {
-    if (!accountId) return
-    let cancelled = false
-    setLoading(true)
-    setError(false)
-    setVisible(PAGE)
-    setRecon(null)
-    setReconError(null)
-    getInternalLedger(accountId)
-      .then((r) => {
-        if (!cancelled) setEntries(r.data ?? [])
-      })
-      .catch(() => { if (!cancelled) setError(true) })
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [accountId, reload])
+  useEffect(() => { setVisible(PAGE); setRecon(null); setReconError(null) }, [accountId])
+
+  const { data: entries = [], isLoading: loading, isError: error, refetch } = useInternalLedger(accountId, !!accountId)
+
+  const accountsReady = !accountsLoading
+  const rows = entries.slice(0, visible)
+  const account = accounts.find((a) => a.accountId === accountId)
 
   const runReconcile = async () => {
     if (reconciling) return
@@ -86,9 +65,6 @@ export default function LedgerConsole() {
     }
   }
 
-  const rows = entries.slice(0, visible)
-  const account = accounts.find((a) => a.accountId === accountId)
-
   return (
     <div>
       <div className="flex items-end justify-between flex-wrap gap-4">
@@ -96,7 +72,7 @@ export default function LedgerConsole() {
           <p className="label">Internal ops · manual</p>
           <h1 className="text-4xl mt-1">Ledger Console</h1>
           <p className="text-sm text-muted mt-2 max-w-[52ch]">
-            The ops agent's powers, hands-on: inspect any account, run a reconciliation, browse the immutable ledger.
+            The ops agent\u0027s powers, hands-on: inspect any account, run a reconciliation, browse the immutable ledger.
           </p>
         </div>
         <label className="flex items-center gap-3">
@@ -127,12 +103,12 @@ export default function LedgerConsole() {
         <div className="card p-6 flex flex-col justify-between gap-5">
           <div>
             <p className="label">Available balance</p>
-            <p className="text-4xl font-display mt-2">{recon ? money(parseFloat(recon.balance)) : account ? money(parseFloat(account.balance)) : '—'}</p>
+            <p className="text-4xl font-display mt-2">{recon ? money(parseFloat(recon.balance)) : account ? money(parseFloat(account.balance)) : "—"}</p>
             <p className="text-xs text-muted mt-1 font-mono">{account?.accountId}</p>
           </div>
           <div className="flex items-center justify-between gap-3">
             <button onClick={runReconcile} disabled={reconciling || !accountId} className="btn btn-accent">
-              {reconciling ? 'Reconciling…' : recon ? 'Reconcile again' : 'Reconcile'}
+              {reconciling ? "Reconciling…" : recon ? "Reconcile again" : "Reconcile"}
             </button>
             {recon && (
               recon.balanced
@@ -177,12 +153,12 @@ export default function LedgerConsole() {
                 <div className="flex flex-wrap gap-x-8 gap-y-2">
                   <span><span className="text-muted">balance</span> <span className="font-mono ml-1">{money(parseFloat(recon.balance))}</span></span>
                   <span><span className="text-muted">ledger sum</span> <span className="font-mono ml-1">{money(parseFloat(recon.ledgerSum))}</span></span>
-                  <span><span className="text-muted">delta</span> <span className="font-mono ml-1">{money(parseFloat(recon.delta ?? '0'))}</span></span>
-                  <span><span className="text-muted">missing</span> <span className="font-mono ml-1">{recon.direction === 'MISSING_DEBIT_LEG' ? 'Dr' : 'Cr'} {money(parseFloat(recon.missingAmount ?? '0'))}</span></span>
+                  <span><span className="text-muted">delta</span> <span className="font-mono ml-1">{money(parseFloat(recon.delta ?? "0"))}</span></span>
+                  <span><span className="text-muted">missing</span> <span className="font-mono ml-1">{recon.direction === "MISSING_DEBIT_LEG" ? "Dr" : "Cr"} {money(parseFloat(recon.missingAmount ?? "0"))}</span></span>
                 </div>
                 <p className="text-xs text-muted leading-relaxed">{recon.diagnosis}</p>
                 <p className="text-xs text-muted font-mono">
-                  ledger ends at balanceAfter={money(parseFloat(recon.lastBalanceAfter ?? '0'))} · entry #{recon.lastEntryId} · ref {recon.lastPaymentId}
+                  ledger ends at balanceAfter={money(parseFloat(recon.lastBalanceAfter ?? "0"))} · entry #{recon.lastEntryId} · ref {recon.lastPaymentId}
                 </p>
               </div>
               <div>
@@ -193,7 +169,7 @@ export default function LedgerConsole() {
                       <span className="flex items-center gap-2 min-w-0">
                         <span className="text-muted font-mono shrink-0">#{e.entryId}</span>
                         <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${typeChipClass(e.type)}`}>{typeLabel(e.type)}</span>
-                        <span className="text-muted truncate font-mono">{e.paymentId === 'OPENING' ? 'ledger' : `ref ${e.paymentId}`}</span>
+                        <span className="text-muted truncate font-mono">{e.paymentId === "OPENING" ? "ledger" : `ref ${e.paymentId}`}</span>
                       </span>
                       <span className="flex items-center gap-3 shrink-0">
                         <span className="font-mono">{money(parseFloat(e.signedAmount))}</span>
@@ -213,8 +189,8 @@ export default function LedgerConsole() {
         {error ? (
           <div className="grid place-items-center min-h-[280px] text-center">
             <div>
-              <p className="text-sm text-muted mb-3">Couldn't load the ledger.</p>
-              <button className="btn btn-ghost !py-2 !px-4 text-sm" onClick={() => setReload((r) => r + 1)}>Try again</button>
+              <p className="text-sm text-muted mb-3">Couldn\u0027t load the ledger.</p>
+              <button className="btn btn-ghost !py-2 !px-4 text-sm" onClick={() => refetch()}>Try again</button>
             </div>
           </div>
         ) : loading ? (
@@ -244,24 +220,24 @@ export default function LedgerConsole() {
 }
 
 function LedgerRow({ e }: { e: LedgerEntry }) {
-  const credit = e.type === 'CREDIT' || e.type === 'OPENING'
-  const amt = parseFloat(e.signedAmount || '0')
-  const date = new Date(e.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const credit = e.type === "CREDIT" || e.type === "OPENING"
+  const amt = parseFloat(e.signedAmount || "0")
+  const date = new Date(e.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
   return (
     <li className="py-3.5 flex items-center justify-between gap-4">
       <div className="flex items-center gap-3 min-w-0">
-        <span aria-hidden="true" className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${credit ? 'bg-[rgba(12,166,120,.12)] text-pos' : 'bg-[rgba(229,72,77,.12)] text-neg'}`}>{credit ? '↑' : '↓'}</span>
+        <span aria-hidden="true" className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${credit ? "bg-[rgba(12,166,120,.12)] text-pos" : "bg-[rgba(229,72,77,.12)] text-neg"}`}>{credit ? "↑" : "↓"}</span>
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium">{e.description || typeLabel(e.type)}</span>
             <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${typeChipClass(e.type)}`}>{typeLabel(e.type)}</span>
           </div>
-          <div className="text-xs text-muted">{date} · {e.paymentId ? `ref ${e.paymentId}` : 'ledger'}</div>
+          <div className="text-xs text-muted">{date} · {e.paymentId ? `ref ${e.paymentId}` : "ledger"}</div>
         </div>
       </div>
       <div className="text-right shrink-0">
-        <div className={`font-display ${credit ? 'text-pos' : 'text-neg'}`}>{money(amt)}</div>
-        <div className="text-xs text-muted font-mono">bal {money(parseFloat(e.balanceAfter || '0'))}</div>
+        <div className={`font-display ${credit ? "text-pos" : "text-neg"}`}>{money(amt)}</div>
+        <div className="text-xs text-muted font-mono">bal {money(parseFloat(e.balanceAfter || "0"))}</div>
       </div>
     </li>
   )

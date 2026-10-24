@@ -32,7 +32,7 @@ export default function App() {
     localStorage.removeItem("jwt");
     setToken(null);
     queryClient.removeQueries({ queryKey: qk.accounts });
-    queryClient.removeQueries({ queryKey: qk.profile });
+    queryClient.removeQueries({ queryKey: qk.profiles });
     queryClient.removeQueries({ queryKey: ["ledger"] });
     setDrawerOpen(false);
     setStage("landing");
@@ -50,7 +50,7 @@ export default function App() {
   if (!token) return <Login onLogin={(t) => {
     localStorage.setItem("jwt", t);
     window.history.replaceState(null, "", "/");
-    queryClient.removeQueries({ queryKey: qk.profile });
+    queryClient.removeQueries({ queryKey: qk.profiles });
     setToken(t);
   }} />;
 
@@ -225,13 +225,13 @@ function AppShell({
                 )
               }
             />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={<Settings email={email} />} />
             <Route path="*" element={<Navigate to={isEmployee ? "/agent" : "/dashboard"} replace />} />
           </Routes>
         </main>
       </div>
 
-      {!onAgent && location.pathname !== "/settings" && (
+      {!onAgent && !location.pathname.startsWith("/settings") && (
         <FloatingChat accounts={accounts} onExpand={() => navigate("/agent")} />
       )}
     </div>

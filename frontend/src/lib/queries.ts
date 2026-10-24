@@ -17,16 +17,17 @@ export const queryClient = new QueryClient({
 export const qk = {
   accounts: ["accounts"] as const,
   internalAccounts: ["internalAccounts"] as const,
-  profile: ["profile"] as const,
+  profiles: ["profile"] as const,
+  profile: (email: string) => ["profile", email] as const,
   ledger: (accountId: string) => ["ledger", accountId] as const,
   internalLedger: (accountId: string) => ["internalLedger", accountId] as const,
 } as const;
 
-export function useProfile(enabled = true) {
+export function useProfile(email: string, enabled = true) {
   return useQuery({
-    queryKey: qk.profile,
+    queryKey: qk.profile(email),
     queryFn: () => getProfile().then((r) => r.data),
-    enabled,
+    enabled: enabled && !!email,
     staleTime: 60_000,
   });
 }

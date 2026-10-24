@@ -2,8 +2,8 @@ import type { AccountView, AgentResponse, ApiResponse, CategorySpend, ChatReques
 
 const API = import.meta.env.VITE_GATEWAY_URL || "";
 
-async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem("jwt");
+async function req<T>(path: string, opts: RequestInit = {}, tokenOverride?: string | null): Promise<T> {
+  const token = tokenOverride === undefined ? localStorage.getItem("jwt") : tokenOverride;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(opts.headers as Record<string, string>)
@@ -39,8 +39,15 @@ export const getAccounts = () => req<ApiResponse<AccountView[]>>("/api/accounts"
 
 export const getProfile = () => req<ApiResponse<UserProfile>>("/api/auth/profile");
 
-export const updateProfile = (body: { fullName: string | null; phone: string | null }) =>
-  req<ApiResponse<UserProfile>>("/api/auth/profile", { method: "PUT", body: JSON.stringify(body) });
+export const updateProfile = (
+  body: { fullName: string | null; phone: string | null },
+  token: string | null,
+) =>
+  req<ApiResponse<UserProfile>>(
+    "/api/auth/profile",
+    { method: "PUT", body: JSON.stringify(body) },
+    token,
+  );
 
 export const transfer = (body: {
   sourceAccountId: string;

@@ -1,9 +1,15 @@
+import { useEffect, useRef } from "react";
 import { useProfile } from "../../lib/queries";
 import type { UserProfile } from "../../types";
 import ProfileSection from "./ProfileSection";
 
-export default function Settings() {
-  const { data: profile, isLoading, isError, refetch, isFetching } = useProfile();
+export default function Settings({ email }: { email: string }) {
+  const { data: profile, isLoading, isError, refetch, isFetching } = useProfile(email);
+  const retryRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (isError && !profile) retryRef.current?.focus();
+  }, [isError, profile]);
 
   return (
     <div className="view-in">
@@ -15,13 +21,14 @@ export default function Settings() {
         </p>
       </header>
 
-      {isLoading ? (
+      {!profile && isLoading ? (
         <SettingsSkeleton />
-      ) : isError || !profile ? (
-        <div className="card mt-8 p-6 md:p-8">
+      ) : !profile ? (
+        <div role="alert" className="card mt-8 p-6 md:p-8">
           <h2 className="text-xl">We couldn't load your settings</h2>
-          <p className="mt-2 text-sm text-muted">Check your connection and try again.</p>
+          <p className="mt-2 text-sm text-muted">Your details didn't come through. Try again.</p>
           <button
+            ref={retryRef}
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
@@ -31,47 +38,65 @@ export default function Settings() {
           </button>
         </div>
       ) : (
-        <div className="grid gap-6 pt-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10">
-          <aside className="self-start lg:sticky lg:top-8">
-            <div className="card p-5">
-              <div className="flex items-center gap-3">
-                <span
-                  aria-hidden="true"
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent font-display text-lg text-white"
-                >
-                  {initial(profile)}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{profile.fullName?.trim() || "Your profile"}</p>
-                  <p className="truncate text-xs text-muted">{profile.email}</p>
-                </div>
-              </div>
-              <span className="chip mt-4 text-[11px] uppercase tracking-[.12em]">{roleLabel(profile.role)}</span>
-            </div>
-
-            <nav aria-label="Settings sections" className="mt-6 px-1">
-              <p className="text-[11px] font-medium uppercase tracking-[.14em] text-muted">On this page</p>
-              <a
-                href="#profile"
-                aria-current="location"
-                className="mt-3 block border-l-2 border-accent pl-3 text-sm font-medium text-ink"
+        <>
+          {isError && (
+            <div role="status" className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-line/40 px-4 py-3 text-sm">
+              <p className="text-muted">We couldn't refresh your details. Showing the last saved version.</p>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="font-medium text-accent hover:underline disabled:opacity-50"
               >
-                Profile
-              </a>
-            </nav>
-          </aside>
+                {isFetching ? "Retrying..." : "Retry"}
+              </button>
+            </div>
+          )}
 
-          <div className="min-w-0">
-            <ProfileSection profile={profile} />
+          <div className="grid gap-6 pt-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10">
+            <aside className="self-start lg:sticky lg:top-8">
+              <div className="card p-5">
+                <div className="flex items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent font-display text-lg text-white"
+                  >
+                    {initial(profile)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{profile.fullName?.trim() || "Your profile"}</p>
+                    <p className="truncate text-xs text-muted">{profile.email}</p>
+                  </div>
+                </div>
+                <span className="chip mt-4 text-[11px] uppercase tracking-[.12em]">{roleLabel(profile.role)}</span>
+              </div>
+
+              <nav aria-label="Settings sections" className="mt-6 px-1">
+                <p className="text-[11px] font-medium uppercase tracking-[.14em] text-muted">On this page</p>
+                <a
+                  href="#profile"
+                  aria-current="location"
+                  className="mt-3 block border-l-2 border-accent pl-3 text-sm font-medium text-ink"
+                >
+                  Profile
+                </a>
+              </nav>
+            </aside>
+
+            <div className="min-w-0">
+              <ProfileSection profile={profile} />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
 }
 
 function roleLabel(role: string) {
-  return role === "EMPLOYEE" ? "Ops analyst" : "Customer";
+  if (role === "EMPLOYEE") return "Ops analyst";
+  if (role === "USER") return "Customer";
+  return "Account holder";
 }
 
 function initial(profile: UserProfile) {

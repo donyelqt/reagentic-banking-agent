@@ -160,4 +160,4 @@ html[data-reduce-motion="true"] *{animation-duration:.001ms!important;animation-
 .brand--light .brand-word { color: var(--ink, #0b1220); }
 .hero-brand .brand-mark { width: 3.9rem; height: 2.6rem; }
 .hero-brand .brand-word { font-size: 2rem; }
-@media (prefers-reduced-motion: reduce) { .bm-echo { animation: none; opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { html:not([data-reduce-motion="false"]) .bm-echo { animation: none; opacity: .3; } }

@@ -91,9 +91,11 @@ function AccountOption({
 /* ---------- page ---------- */
 
 function initialSelection(accounts: AccountView[], email: string): { from: string; to: string } {
-  const preferred = preferredAccountId(email, accounts)
   const supported = accounts.filter((a) => isSupported(a.type))
-  const from = preferred ?? supported[0]?.accountId ?? accounts[0]?.accountId ?? ''
+  const preferred = preferredAccountId(email, accounts)
+  const preferredSupported =
+    preferred && supported.some((account) => account.accountId === preferred) ? preferred : null
+  const from = preferredSupported ?? supported[0]?.accountId ?? accounts[0]?.accountId ?? ''
   const to =
     accounts.find((a) => a.accountId !== from && isSupported(a.type))?.accountId ??
     accounts.find((a) => a.accountId !== from)?.accountId ??

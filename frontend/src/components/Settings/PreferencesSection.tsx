@@ -20,6 +20,7 @@ export default function PreferencesSection({
 }) {
   const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(email));
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const systemReduced = useSystemReducedMotion();
 
   useEffect(() => {
     setPreferences(readPreferences(email));
@@ -42,8 +43,7 @@ export default function PreferencesSection({
   const stored = preferences.defaultAccountId;
   const known = stored ? accounts.some((account) => account.accountId === stored) : true;
   const missing = stored && !known ? stored : null;
-  const reduced = effectiveReduceMotion(preferences);
-  const systemReduced = systemPrefersReducedMotion();
+  const reduced = effectiveReduceMotion(preferences, systemReduced);
 
   return (
     <section id="preferences" aria-labelledby="preferences-heading" className="scroll-mt-24">
@@ -139,6 +139,21 @@ export default function PreferencesSection({
       </div>
     </section>
   );
+}
+
+function useSystemReducedMotion() {
+  const [systemReduced, setSystemReduced] = useState(systemPrefersReducedMotion);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = (event: MediaQueryListEvent) => setSystemReduced(event.matches);
+    setSystemReduced(query.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
+  return systemReduced;
 }
 
 function motionCopy(reduced: boolean, stored: boolean | null, systemReduced: boolean) {

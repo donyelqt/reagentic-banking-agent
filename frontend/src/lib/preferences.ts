@@ -45,8 +45,11 @@ export function writePreferences(email: string, preferences: Preferences) {
   }
 }
 
-export function effectiveReduceMotion(preferences: Preferences) {
-  return preferences.reduceMotion ?? systemPrefersReducedMotion();
+export function effectiveReduceMotion(
+  preferences: Preferences,
+  systemReduced = systemPrefersReducedMotion(),
+) {
+  return preferences.reduceMotion ?? systemReduced;
 }
 
 export function applyMotionPreference(preferences: Preferences) {

@@ -124,7 +124,7 @@ export function Mascot({
           @keyframes ${id}-wave-wag { 0% { transform: rotate(0); } 20% { transform: rotate(16deg); } 40% { transform: rotate(-14deg); } 60% { transform: rotate(15deg); } 80% { transform: rotate(-12deg); } 100% { transform: rotate(0); } } // bigger wag 30deg total
 
           @media (prefers-reduced-motion: reduce) {
-            .${id}-scene, .${id}-head, .${id}-lid-l, .${id}-lid-r, .${id}-left-arm, .${id}-right-arm, .${id}-right-arm-wag {
+            html:not([data-reduce-motion="false"]) .${id}-scene, html:not([data-reduce-motion="false"]) .${id}-head, html:not([data-reduce-motion="false"]) .${id}-lid-l, html:not([data-reduce-motion="false"]) .${id}-lid-r, html:not([data-reduce-motion="false"]) .${id}-left-arm, html:not([data-reduce-motion="false"]) .${id}-right-arm, html:not([data-reduce-motion="false"]) .${id}-right-arm-wag {
               animation: none !important;
             }
           }

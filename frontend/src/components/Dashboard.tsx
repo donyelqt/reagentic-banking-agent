@@ -7,6 +7,7 @@ import { CategoryChart } from "./CategoryChart"
 import { SpendingTrendChart } from "./SpendingTrendChart"
 import { Mascot, type Mood } from "./mascot/Mascot"
 import { useAllLedgers } from "../lib/queries"
+import { reducedMotionEnabled } from "../lib/preferences"
 import { useQuery } from "@tanstack/react-query"
 
 export default function Dashboard({ accounts, onTransfer, onViewAll }: { accounts: AccountView[]; onTransfer: () => void; onViewAll: () => void }) {
@@ -31,8 +32,7 @@ export default function Dashboard({ accounts, onTransfer, onViewAll }: { account
   })
 
   useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    if (reduce) return
+    if (reducedMotionEnabled()) return
     let cancelled = false
     const toIdle = window.setTimeout(() => { if (!cancelled) setMood("idle") }, 2200)
     const schedule = () => {

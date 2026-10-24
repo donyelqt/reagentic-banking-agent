@@ -140,8 +140,9 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,te
 @keyframes spin{to{transform:rotate(360deg)}}
 
 @media (prefers-reduced-motion:reduce){
-  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  html:not([data-reduce-motion="false"]) *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+html[data-reduce-motion="true"] *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 /* ===== Reagentic brand mark ===== */
 .brand { display: inline-flex; align-items: center; gap: .6rem; user-select: none; }
 .brand-mark { display: block; width: 2.4rem; height: 1.6rem; filter: drop-shadow(0 4px 12px rgba(45, 67, 245, .35)); }
@@ -159,4 +160,4 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,te
 .brand--light .brand-word { color: var(--ink, #0b1220); }
 .hero-brand .brand-mark { width: 3.9rem; height: 2.6rem; }
 .hero-brand .brand-word { font-size: 2rem; }
-@media (prefers-reduced-motion: reduce) { .bm-echo { animation: none; opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { html:not([data-reduce-motion="false"]) .bm-echo { animation: none; opacity: .3; } }

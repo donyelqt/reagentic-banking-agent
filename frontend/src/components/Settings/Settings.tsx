@@ -1,17 +1,20 @@
 import { useEffect, useRef } from "react";
 import { useProfile } from "../../lib/queries";
 import type { Session } from "../../api";
-import type { UserProfile } from "../../types";
+import type { AccountView, UserProfile } from "../../types";
 import ProfileSection from "./ProfileSection";
 import SecuritySection from "./SecuritySection";
+import PreferencesSection from "./PreferencesSection";
 
 export default function Settings({
   email,
   session,
+  accounts,
   onSignOut,
 }: {
   email: string;
   session: Session | null;
+  accounts: AccountView[];
   onSignOut: () => void;
 }) {
   const { data: profile, isLoading, isError, refetch, isFetching } = useProfile(email);
@@ -27,7 +30,7 @@ export default function Settings({
         <p className="label">Account</p>
         <h1 className="mt-2 text-3xl md:text-4xl">Settings</h1>
         <p className="mt-2 max-w-xl text-sm text-muted md:text-base">
-          Your profile and sign-in details.
+          Your profile, sign-in details, and preferences.
         </p>
       </header>
 
@@ -95,6 +98,12 @@ export default function Settings({
                 >
                   Security
                 </a>
+                <a
+                  href="#preferences"
+                  className="mt-3 block border-l-2 border-transparent pl-3 text-sm font-medium text-muted transition hover:border-line hover:text-ink"
+                >
+                  Preferences
+                </a>
               </nav>
             </aside>
 
@@ -106,6 +115,7 @@ export default function Settings({
                 roleLabel={roleLabel(session?.role ?? profile.role)}
                 onSignOut={onSignOut}
               />
+              <PreferencesSection email={email} accounts={accounts} />
             </div>
           </div>
         </>

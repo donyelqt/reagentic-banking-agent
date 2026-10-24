@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { reducedMotionEnabled } from './preferences'
 
 export function useCountUp(target: number, duration = 950) {
   const [value, setValue] = useState(0)
   const raf = useRef<number>(0)
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (reducedMotionEnabled()) {
       setValue(target)
       return
     }

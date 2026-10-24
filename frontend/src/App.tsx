@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Landing from "./Landing";
 import Login from "./components/Login";
@@ -10,6 +10,7 @@ import AgentChat from "./components/AgentChat";
 import Settings from "./components/Settings/Settings";
 import { Brand } from "./components/Brand";
 import { sessionFromToken, type Session } from "./api";
+import { applyMotionPreference, readPreferences } from "./lib/preferences";
 import { useAccounts, qk, queryClient } from "./lib/queries";
 import type { AccountView } from "./types";
 import FloatingChat from "./components/FloatingChat";
@@ -27,6 +28,11 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("sidebar-collapsed") === "1");
   const { data: accounts = [] } = useAccounts(!!token && stage === "app");
+  const sessionEmail = session?.email ?? "";
+
+  useLayoutEffect(() => {
+    applyMotionPreference(sessionEmail ? readPreferences(sessionEmail) : { defaultAccountId: null, reduceMotion: null });
+  }, [sessionEmail]);
 
   function logout() {
     localStorage.removeItem("jwt");
@@ -197,7 +203,7 @@ function AppShell({
                 isEmployee ? (
                   <Navigate to="/agent" replace />
                 ) : (
-                  <ActivityPage accounts={accounts} />
+                  <ActivityPage key={email} accounts={accounts} email={email} />
                 )
               }
             />
@@ -208,7 +214,9 @@ function AppShell({
                   <Navigate to="/agent" replace />
                 ) : (
                   <Transfer
+                    key={email}
                     accounts={accounts}
+                    email={email}
                     onDone={() => {
                       onAccountsChanged();
                       navigate("/dashboard");
@@ -228,7 +236,7 @@ function AppShell({
                 )
               }
             />
-            <Route path="/settings" element={<Settings email={email} session={session} onSignOut={onLogout} />} />
+            <Route path="/settings" element={<Settings email={email} session={session} accounts={accounts} onSignOut={onLogout} />} />
             <Route path="*" element={<Navigate to={isEmployee ? "/agent" : "/dashboard"} replace />} />
           </Routes>
         </main>

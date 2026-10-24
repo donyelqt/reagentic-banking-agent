@@ -103,7 +103,7 @@ export default function Settings({
               <SecuritySection
                 profile={profile}
                 session={session}
-                roleLabel={roleLabel(profile.role)}
+                roleLabel={roleLabel(session?.role ?? profile.role)}
                 onSignOut={onSignOut}
               />
             </div>

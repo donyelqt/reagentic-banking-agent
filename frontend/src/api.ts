@@ -68,7 +68,7 @@ export const changePassword = (
   body: { currentPassword: string; newPassword: string },
   token: string | null,
 ) =>
-  req<ApiResponse<string>>(
+  req<ApiResponse<null>>(
     "/api/auth/password",
     { method: "PUT", body: JSON.stringify(body) },
     token,

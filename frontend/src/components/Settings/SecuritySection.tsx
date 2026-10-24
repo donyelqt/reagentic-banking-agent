@@ -21,6 +21,8 @@ type FieldErrors = {
   form?: string;
 };
 
+type FieldName = "current" | "next" | "confirm";
+
 export default function SecuritySection({
   profile,
   session,
@@ -38,46 +40,54 @@ export default function SecuritySection({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saved, setSaved] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [focusRequest, setFocusRequest] = useState<{ field: FieldName; nonce: number } | null>(null);
 
   const currentRef = useRef<HTMLInputElement>(null);
   const nextRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
-  const lastFocusedError = useRef<string | null>(null);
+  const focusNonce = useRef(0);
 
   const mutation = useMutation({
     mutationFn: ({ currentPassword, newPassword, token }: ChangePasswordVars) =>
       changePassword({ currentPassword, newPassword }, token),
     onSuccess: (_response, variables) => {
-      if (!isSameSession(variables.email)) return;
+      if (!isSameSession(variables)) return;
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setErrors({});
+      setFocusRequest(null);
       setSaved(true);
     },
     onError: (error, variables) => {
-      if (!isSameSession(variables.email)) return;
+      if (!isSameSession(variables)) return;
       setSaved(false);
-      setErrors(mapServerError(error));
+      const nextErrors = mapServerError(error);
+      setErrors(nextErrors);
+      const field = firstErrorField(nextErrors);
+      if (field) requestFocus(field);
     },
   });
 
   useEffect(() => {
-    const target = errors.current ? "current" : errors.next ? "next" : errors.confirm ? "confirm" : null;
-    if (!target) {
-      lastFocusedError.current = null;
-      return;
-    }
-    const signature = `${target}:${errors[target]}`;
-    if (signature === lastFocusedError.current) return;
-    lastFocusedError.current = signature;
-    if (target === "current") currentRef.current?.focus();
-    else if (target === "next") nextRef.current?.focus();
+    if (!focusRequest) return;
+    if (focusRequest.field === "current") currentRef.current?.focus();
+    else if (focusRequest.field === "next") nextRef.current?.focus();
     else confirmRef.current?.focus();
-  }, [errors]);
+  }, [focusRequest]);
 
-  function isSameSession(email: string) {
-    return sessionFromToken(localStorage.getItem("jwt"))?.email === email;
+  function requestFocus(field: FieldName) {
+    focusNonce.current += 1;
+    setFocusRequest({ field, nonce: focusNonce.current });
+  }
+
+  function isSameSession(variables: ChangePasswordVars) {
+    const currentToken = localStorage.getItem("jwt");
+    return (
+      currentToken !== null &&
+      currentToken === variables.token &&
+      sessionFromToken(currentToken)?.email === variables.email
+    );
   }
 
   function edit(field: "current" | "next" | "confirm", value: string) {
@@ -95,26 +105,30 @@ export default function SecuritySection({
     if (mutation.isPending) return;
 
     const nextErrors: FieldErrors = {};
-    if (!currentPassword) {
+    if (!currentPassword.trim()) {
       nextErrors.current = "Enter your current password.";
     }
-    if (!newPassword) {
+    if (!newPassword.trim()) {
       nextErrors.next = "Enter a new password.";
     } else if (newPassword.length < MIN_LENGTH || newPassword.length > MAX_LENGTH) {
       nextErrors.next = `Use between ${MIN_LENGTH} and ${MAX_LENGTH} characters.`;
     } else if (byteLength(newPassword) > MAX_BYTES) {
       nextErrors.next = "That password is too long. Use 72 bytes or fewer.";
     } else if (newPassword === currentPassword) {
-      nextErrors.next = "Choose a password you haven't used for this account.";
+      nextErrors.next = "Choose a password different from your current password.";
     }
-    if (!confirmPassword) {
+    if (!confirmPassword.trim()) {
       nextErrors.confirm = "Confirm your new password.";
     } else if (confirmPassword !== newPassword) {
       nextErrors.confirm = "Passwords don't match.";
     }
 
     setErrors(nextErrors);
-    if (nextErrors.current || nextErrors.next || nextErrors.confirm) return;
+    const field = firstErrorField(nextErrors);
+    if (field) {
+      requestFocus(field);
+      return;
+    }
 
     mutation.mutate({
       email: profile.email,
@@ -237,7 +251,9 @@ export default function SecuritySection({
         <dl className="mt-6 grid gap-5 sm:grid-cols-2">
           <div>
             <dt className="label">Signed in as</dt>
-            <dd className="mt-1 truncate text-sm" title={profile.email}>{profile.email}</dd>
+            <dd className="mt-1 truncate text-sm" title={session?.email ?? profile.email}>
+              {session?.email ?? profile.email}
+            </dd>
           </div>
           <div>
             <dt className="label">Role</dt>
@@ -284,20 +300,28 @@ function mapServerError(error: unknown): FieldErrors {
     return { current: "That isn't your current password." };
   }
   if (error.code === "PASSWORD_REUSE") {
-    return { next: "Choose a password you haven't used for this account." };
+    return { next: "Choose a password different from your current password." };
   }
   if (error.code === "PASSWORD_TOO_LONG") {
     return { next: "That password is too long. Use 72 bytes or fewer." };
   }
   if (error.code === "VALIDATION") {
-    return error.message.startsWith("currentPassword")
-      ? { current: "Enter your current password." }
-      : { next: `Use between ${MIN_LENGTH} and ${MAX_LENGTH} characters.` };
-  }
-  if (error.code === "INVALID_BODY") {
-    return { form: "We couldn't update your password. Try again in a moment." };
+    const required = error.message.includes("required");
+    if (error.message.startsWith("currentPassword")) {
+      return { current: required ? "Enter your current password." : "We couldn't verify that current password." };
+    }
+    return {
+      next: required ? "Enter a new password." : `Use between ${MIN_LENGTH} and ${MAX_LENGTH} characters.`,
+    };
   }
   return { form: "We couldn't update your password. Try again in a moment." };
+}
+
+function firstErrorField(errors: FieldErrors): FieldName | null {
+  if (errors.current) return "current";
+  if (errors.next) return "next";
+  if (errors.confirm) return "confirm";
+  return null;
 }
 
 function formatMoment(moment: number | undefined) {

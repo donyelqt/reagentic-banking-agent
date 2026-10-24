@@ -9,7 +9,7 @@ import LedgerConsole from "./components/LedgerConsole";
 import AgentChat from "./components/AgentChat";
 import Settings from "./components/Settings/Settings";
 import { Brand } from "./components/Brand";
-import { sessionFromToken } from "./api";
+import { sessionFromToken, type Session } from "./api";
 import { useAccounts, qk, queryClient } from "./lib/queries";
 import type { AccountView } from "./types";
 import FloatingChat from "./components/FloatingChat";
@@ -60,6 +60,7 @@ export default function App() {
         isEmployee={isEmployee}
         email={session?.email ?? "user"}
         roleLabel={isEmployee ? "Ops Analyst" : "Customer"}
+        session={session}
         accounts={accounts}
         collapsed={collapsed}
         onToggleCollapse={() => {
@@ -80,6 +81,7 @@ function AppShell({
   isEmployee,
   email,
   roleLabel,
+  session,
   accounts,
   collapsed,
   onToggleCollapse,
@@ -91,6 +93,7 @@ function AppShell({
   isEmployee: boolean;
   email: string;
   roleLabel: string;
+  session: Session | null;
   accounts: AccountView[];
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -225,7 +228,7 @@ function AppShell({
                 )
               }
             />
-            <Route path="/settings" element={<Settings email={email} />} />
+            <Route path="/settings" element={<Settings email={email} session={session} onSignOut={onLogout} />} />
             <Route path="*" element={<Navigate to={isEmployee ? "/agent" : "/dashboard"} replace />} />
           </Routes>
         </main>

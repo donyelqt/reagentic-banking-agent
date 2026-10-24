@@ -104,7 +104,7 @@ function initialSelection(accounts: AccountView[], email: string): { from: strin
 }
 
 export default function Transfer({ accounts, email, onDone }: { accounts: AccountView[]; email: string; onDone: () => void }) {
-  const initial = initialSelection(accounts, email)
+  const [initial] = useState(() => initialSelection(accounts, email))
   const [from, setFrom] = useState(initial.from)
   const [to, setTo] = useState(initial.to)
   const [amount, setAmount] = useState('')

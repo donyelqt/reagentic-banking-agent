@@ -25,7 +25,7 @@ function categoryColor(category: string): string {
 }
 
 export default function ActivityPage({ accounts, email }: { accounts: AccountView[]; email: string }) {
-  const [accountId, setAccountId] = useState(
+  const [accountId, setAccountId] = useState(() =>
     preferredAccountId(email, accounts) ?? accounts[0]?.accountId ?? "",
   )
   const [visible, setVisible] = useState(PAGE)

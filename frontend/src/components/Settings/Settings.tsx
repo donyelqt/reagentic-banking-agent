@@ -1,9 +1,19 @@
 import { useEffect, useRef } from "react";
 import { useProfile } from "../../lib/queries";
+import type { Session } from "../../api";
 import type { UserProfile } from "../../types";
 import ProfileSection from "./ProfileSection";
+import SecuritySection from "./SecuritySection";
 
-export default function Settings({ email }: { email: string }) {
+export default function Settings({
+  email,
+  session,
+  onSignOut,
+}: {
+  email: string;
+  session: Session | null;
+  onSignOut: () => void;
+}) {
   const { data: profile, isLoading, isError, refetch, isFetching } = useProfile(email);
   const retryRef = useRef<HTMLButtonElement>(null);
 
@@ -17,7 +27,7 @@ export default function Settings({ email }: { email: string }) {
         <p className="label">Account</p>
         <h1 className="mt-2 text-3xl md:text-4xl">Settings</h1>
         <p className="mt-2 max-w-xl text-sm text-muted md:text-base">
-          Your profile, sign-in, and the way Reagentic behaves for you.
+          Your profile and sign-in details.
         </p>
       </header>
 
@@ -75,16 +85,27 @@ export default function Settings({ email }: { email: string }) {
                 <p className="text-[11px] font-medium uppercase tracking-[.14em] text-muted">On this page</p>
                 <a
                   href="#profile"
-                  aria-current="location"
                   className="mt-3 block border-l-2 border-accent pl-3 text-sm font-medium text-ink"
                 >
                   Profile
                 </a>
+                <a
+                  href="#security"
+                  className="mt-3 block border-l-2 border-transparent pl-3 text-sm font-medium text-muted transition hover:border-line hover:text-ink"
+                >
+                  Security
+                </a>
               </nav>
             </aside>
 
-            <div className="min-w-0">
+            <div className="min-w-0 space-y-12">
               <ProfileSection profile={profile} />
+              <SecuritySection
+                profile={profile}
+                session={session}
+                roleLabel={roleLabel(profile.role)}
+                onSignOut={onSignOut}
+              />
             </div>
           </div>
         </>

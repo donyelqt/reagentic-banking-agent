@@ -2,6 +2,19 @@ import type { AccountView, AgentResponse, ApiResponse, CategorySpend, ChatReques
 
 const API = import.meta.env.VITE_GATEWAY_URL || "";
 
+/** Error carrying the HTTP status and the API error code from the shared error envelope. */
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly code: string;
+
+  constructor(message: string, status: number, code: string) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 async function req<T>(path: string, opts: RequestInit = {}, tokenOverride?: string | null): Promise<T> {
   const token = tokenOverride === undefined ? localStorage.getItem("jwt") : tokenOverride;
   const headers: Record<string, string> = {
@@ -13,13 +26,15 @@ async function req<T>(path: string, opts: RequestInit = {}, tokenOverride?: stri
   if (!res.ok) {
     const text = await res.text();
     let message = text || "HTTP " + res.status;
+    let code = "HTTP_" + res.status;
     try {
       const body = JSON.parse(text);
       message = body?.message ?? body?.error ?? message;
+      code = body?.code ?? code;
     } catch {
       // non-JSON error body - keep the raw text
     }
-    throw new Error(message);
+    throw new ApiRequestError(message, res.status, code);
   }
   return res.json();
 }
@@ -45,6 +60,16 @@ export const updateProfile = (
 ) =>
   req<ApiResponse<UserProfile>>(
     "/api/auth/profile",
+    { method: "PUT", body: JSON.stringify(body) },
+    token,
+  );
+
+export const changePassword = (
+  body: { currentPassword: string; newPassword: string },
+  token: string | null,
+) =>
+  req<ApiResponse<string>>(
+    "/api/auth/password",
     { method: "PUT", body: JSON.stringify(body) },
     token,
   );
@@ -161,12 +186,24 @@ export async function classifyEntries(entries: LedgerEntry[]): Promise<Map<numbe
   return result;
 }
 
-export function sessionFromToken(token: string | null): { email: string; role: string } | null {
+export type Session = {
+  email: string;
+  role: string;
+  issuedAt?: number;
+  expiresAt?: number;
+};
+
+export function sessionFromToken(token: string | null): Session | null {
   if (!token) return null;
   try {
     const part = token.split(".")[1];
     const json = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
-    return { email: json.sub, role: json.role };
+    return {
+      email: json.sub,
+      role: json.role,
+      issuedAt: typeof json.iat === "number" ? json.iat * 1000 : undefined,
+      expiresAt: typeof json.exp === "number" ? json.exp * 1000 : undefined,
+    };
   } catch {
     return null;
   }

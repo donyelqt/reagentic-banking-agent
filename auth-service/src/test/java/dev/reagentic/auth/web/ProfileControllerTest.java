@@ -6,20 +6,27 @@ import dev.reagentic.auth.service.AuthService;
 import dev.reagentic.common.dto.ApiResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ProfileControllerTest {
 
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private UserRepository userRepository;
     private ProfileController controller;
     private User user;
@@ -29,7 +36,7 @@ class ProfileControllerTest {
     void setUp() {
         userRepository = mock(UserRepository.class);
         controller = new ProfileController(userRepository);
-        user = new User("usr-demo-0001", "demo@bank.dev", "hash", "USER");
+        user = new User("usr-demo-0001", "demo@bank.dev", passwordEncoder.encode("demo1234"), "USER");
         when(userRepository.findByEmail("demo@bank.dev")).thenReturn(Optional.of(user));
         authentication = new UsernamePasswordAuthenticationToken("demo@bank.dev", null);
     }
@@ -78,5 +85,56 @@ class ProfileControllerTest {
         Authentication ghost = new UsernamePasswordAuthenticationToken("ghost@bank.dev", null);
 
         assertThrows(AuthService.AuthException.class, () -> controller.getProfile(ghost));
+    }
+
+    @Test
+    void changesThePasswordWhenTheCurrentPasswordMatches() {
+        ResponseEntity<ApiResponse<String>> response = controller.changePassword(
+                new ProfileController.ChangePasswordRequest("demo1234", "newpass456"),
+                authentication);
+
+        assertEquals(200, response.getStatusCode().value());
+        assertTrue(response.getBody().success());
+        assertTrue(passwordEncoder.matches("newpass456", user.getPasswordHash()));
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void rejectsAWrongCurrentPassword() {
+        String originalHash = user.getPasswordHash();
+
+        ResponseEntity<ApiResponse<String>> response = controller.changePassword(
+                new ProfileController.ChangePasswordRequest("not-the-password", "newpass456"),
+                authentication);
+
+        assertEquals(400, response.getStatusCode().value());
+        assertFalse(response.getBody().success());
+        assertEquals(originalHash, user.getPasswordHash());
+        verify(userRepository, never()).save(user);
+    }
+
+    @Test
+    void rejectsReusingTheCurrentPassword() {
+        String originalHash = user.getPasswordHash();
+
+        ResponseEntity<ApiResponse<String>> response = controller.changePassword(
+                new ProfileController.ChangePasswordRequest("demo1234", "demo1234"),
+                authentication);
+
+        assertEquals(400, response.getStatusCode().value());
+        assertEquals(originalHash, user.getPasswordHash());
+        verify(userRepository, never()).save(user);
+    }
+
+    @Test
+    void rejectsAPasswordBeyondBcryptsByteLimit() {
+        String multibytePassword = "\uD83D\uDD12".repeat(19);
+
+        ResponseEntity<ApiResponse<String>> response = controller.changePassword(
+                new ProfileController.ChangePasswordRequest("demo1234", multibytePassword),
+                authentication);
+
+        assertEquals(400, response.getStatusCode().value());
+        verify(userRepository, never()).save(user);
     }
 }

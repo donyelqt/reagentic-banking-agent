@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { agentChat } from '../api'
+import { preferredAccountId } from '../lib/preferences'
 import type { AccountView, AgentResponse } from '../types'
 import ApprovalModal from './ApprovalModal'
 import { maskedId, formatMoney } from '../utils'
@@ -89,14 +90,32 @@ function AccountOption({
 
 /* ---------- page ---------- */
 
-export default function Transfer({ accounts, onDone }: { accounts: AccountView[]; onDone: () => void }) {
+function initialSelection(accounts: AccountView[], email: string): { from: string; to: string } {
+  const preferred = preferredAccountId(email, accounts)
   const supported = accounts.filter((a) => isSupported(a.type))
-  const [from, setFrom] = useState(supported[0]?.accountId ?? accounts[0]?.accountId ?? '')
-  const [to, setTo] = useState(supported[1]?.accountId ?? accounts[1]?.accountId ?? '')
+  const from = preferred ?? supported[0]?.accountId ?? accounts[0]?.accountId ?? ''
+  const to =
+    accounts.find((a) => a.accountId !== from && isSupported(a.type))?.accountId ??
+    accounts.find((a) => a.accountId !== from)?.accountId ??
+    ''
+  return { from, to }
+}
+
+export default function Transfer({ accounts, email, onDone }: { accounts: AccountView[]; email: string; onDone: () => void }) {
+  const initial = initialSelection(accounts, email)
+  const [from, setFrom] = useState(initial.from)
+  const [to, setTo] = useState(initial.to)
   const [amount, setAmount] = useState('')
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [last, setLast] = useState<AgentResponse | null>(null)
+
+  useEffect(() => {
+    if (from || accounts.length === 0) return
+    const selection = initialSelection(accounts, email)
+    setFrom(selection.from)
+    setTo(selection.to)
+  }, [accounts, email, from])
 
   const busy = phase === 'planning' || phase === 'executing'
   const fromAcc = accounts.find((a) => a.accountId === from)

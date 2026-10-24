@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { downloadStatementCsv, downloadStatementExcel, classifyEntries } from "../api"
+import { preferredAccountId } from "../lib/preferences"
 import type { AccountView, LedgerEntry } from "../types"
 import { CATEGORY_COLORS } from "../lib/chartColors"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
@@ -23,12 +24,19 @@ function categoryColor(category: string): string {
   return CATEGORY_COLORS[(idx >= 0 ? idx : 11) % CATEGORY_COLORS.length]
 }
 
-export default function ActivityPage({ accounts }: { accounts: AccountView[] }) {
-  const [accountId, setAccountId] = useState(accounts[0]?.accountId ?? "")
+export default function ActivityPage({ accounts, email }: { accounts: AccountView[]; email: string }) {
+  const [accountId, setAccountId] = useState(
+    preferredAccountId(email, accounts) ?? accounts[0]?.accountId ?? "",
+  )
   const [visible, setVisible] = useState(PAGE)
   const [dlError, setDlError] = useState<string | null>(null)
 
   useEffect(() => { setVisible(PAGE) }, [accountId])
+
+  useEffect(() => {
+    if (accountId || accounts.length === 0) return
+    setAccountId(preferredAccountId(email, accounts) ?? accounts[0].accountId)
+  }, [accountId, accounts, email])
 
   const { data: entries = [], isLoading: loading, isError: error, refetch } = useLedger(accountId, !!accountId)
 

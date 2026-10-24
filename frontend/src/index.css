@@ -142,6 +142,7 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,te
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+html[data-reduce-motion="true"] *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 /* ===== Reagentic brand mark ===== */
 .brand { display: inline-flex; align-items: center; gap: .6rem; user-select: none; }
 .brand-mark { display: block; width: 2.4rem; height: 1.6rem; filter: drop-shadow(0 4px 12px rgba(45, 67, 245, .35)); }

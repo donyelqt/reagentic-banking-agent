@@ -3,10 +3,10 @@ package dev.reagentic.auth.web;
 import dev.reagentic.auth.domain.User;
 import dev.reagentic.auth.repository.UserRepository;
 import dev.reagentic.auth.service.AuthService;
+import dev.reagentic.auth.service.PasswordChangeException;
 import dev.reagentic.common.dto.ApiResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -15,7 +15,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -89,12 +88,12 @@ class ProfileControllerTest {
 
     @Test
     void changesThePasswordWhenTheCurrentPasswordMatches() {
-        ResponseEntity<ApiResponse<String>> response = controller.changePassword(
+        ApiResponse<String> response = controller.changePassword(
                 new ProfileController.ChangePasswordRequest("demo1234", "newpass456"),
                 authentication);
 
-        assertEquals(200, response.getStatusCode().value());
-        assertTrue(response.getBody().success());
+        assertTrue(response.success());
+        assertEquals("Password updated", response.message());
         assertTrue(passwordEncoder.matches("newpass456", user.getPasswordHash()));
         verify(userRepository).save(user);
     }
@@ -103,12 +102,12 @@ class ProfileControllerTest {
     void rejectsAWrongCurrentPassword() {
         String originalHash = user.getPasswordHash();
 
-        ResponseEntity<ApiResponse<String>> response = controller.changePassword(
-                new ProfileController.ChangePasswordRequest("not-the-password", "newpass456"),
-                authentication);
+        PasswordChangeException failure = assertThrows(PasswordChangeException.class,
+                () -> controller.changePassword(
+                        new ProfileController.ChangePasswordRequest("not-the-password", "newpass456"),
+                        authentication));
 
-        assertEquals(400, response.getStatusCode().value());
-        assertFalse(response.getBody().success());
+        assertEquals("INVALID_CURRENT_PASSWORD", failure.getCode());
         assertEquals(originalHash, user.getPasswordHash());
         verify(userRepository, never()).save(user);
     }
@@ -117,11 +116,12 @@ class ProfileControllerTest {
     void rejectsReusingTheCurrentPassword() {
         String originalHash = user.getPasswordHash();
 
-        ResponseEntity<ApiResponse<String>> response = controller.changePassword(
-                new ProfileController.ChangePasswordRequest("demo1234", "demo1234"),
-                authentication);
+        PasswordChangeException failure = assertThrows(PasswordChangeException.class,
+                () -> controller.changePassword(
+                        new ProfileController.ChangePasswordRequest("demo1234", "demo1234"),
+                        authentication));
 
-        assertEquals(400, response.getStatusCode().value());
+        assertEquals("PASSWORD_REUSE", failure.getCode());
         assertEquals(originalHash, user.getPasswordHash());
         verify(userRepository, never()).save(user);
     }
@@ -130,11 +130,12 @@ class ProfileControllerTest {
     void rejectsAPasswordBeyondBcryptsByteLimit() {
         String multibytePassword = "\uD83D\uDD12".repeat(19);
 
-        ResponseEntity<ApiResponse<String>> response = controller.changePassword(
-                new ProfileController.ChangePasswordRequest("demo1234", multibytePassword),
-                authentication);
+        PasswordChangeException failure = assertThrows(PasswordChangeException.class,
+                () -> controller.changePassword(
+                        new ProfileController.ChangePasswordRequest("demo1234", multibytePassword),
+                        authentication));
 
-        assertEquals(400, response.getStatusCode().value());
+        assertEquals("PASSWORD_TOO_LONG", failure.getCode());
         verify(userRepository, never()).save(user);
     }
 }

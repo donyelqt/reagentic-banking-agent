@@ -42,6 +42,7 @@ export default function SecuritySection({
   const currentRef = useRef<HTMLInputElement>(null);
   const nextRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
+  const lastFocusedError = useRef<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: ({ currentPassword, newPassword, token }: ChangePasswordVars) =>
@@ -62,9 +63,17 @@ export default function SecuritySection({
   });
 
   useEffect(() => {
-    if (errors.current) currentRef.current?.focus();
-    else if (errors.next) nextRef.current?.focus();
-    else if (errors.confirm) confirmRef.current?.focus();
+    const target = errors.current ? "current" : errors.next ? "next" : errors.confirm ? "confirm" : null;
+    if (!target) {
+      lastFocusedError.current = null;
+      return;
+    }
+    const signature = `${target}:${errors[target]}`;
+    if (signature === lastFocusedError.current) return;
+    lastFocusedError.current = signature;
+    if (target === "current") currentRef.current?.focus();
+    else if (target === "next") nextRef.current?.focus();
+    else confirmRef.current?.focus();
   }, [errors]);
 
   function isSameSession(email: string) {

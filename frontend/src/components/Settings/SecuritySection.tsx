@@ -103,6 +103,7 @@ export default function SecuritySection({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (mutation.isPending) return;
+    setSaved(false);
 
     const nextErrors: FieldErrors = {};
     if (!currentPassword.trim()) {

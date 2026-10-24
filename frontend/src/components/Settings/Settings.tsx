@@ -8,8 +8,8 @@ export default function Settings({ email }: { email: string }) {
   const retryRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (isError && !profile) retryRef.current?.focus();
-  }, [isError, profile]);
+    if (!isFetching && isError && !profile) retryRef.current?.focus();
+  }, [isFetching, isError, profile]);
 
   return (
     <div className="view-in">

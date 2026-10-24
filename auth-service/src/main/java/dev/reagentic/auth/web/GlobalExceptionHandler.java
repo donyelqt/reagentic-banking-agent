@@ -1,6 +1,7 @@
 package dev.reagentic.auth.web;
 
 import dev.reagentic.auth.service.AuthService;
+import dev.reagentic.auth.service.PasswordChangeException;
 import dev.reagentic.common.dto.ApiError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleAuth(AuthService.AuthException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ApiError(401, ex.getCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(PasswordChangeException.class)
+    public ResponseEntity<ApiError> handlePasswordChange(PasswordChangeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiError(400, ex.getCode(), ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

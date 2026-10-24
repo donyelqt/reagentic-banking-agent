@@ -3,11 +3,11 @@ package dev.reagentic.auth.web;
 import dev.reagentic.auth.domain.User;
 import dev.reagentic.auth.repository.UserRepository;
 import dev.reagentic.auth.service.AuthService;
+import dev.reagentic.auth.service.PasswordChangeException;
 import dev.reagentic.common.dto.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -68,25 +68,25 @@ public class ProfileController {
 
     @PutMapping("/password")
     @Transactional
-    public ResponseEntity<ApiResponse<String>> changePassword(
+    public ApiResponse<String> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
             Authentication authentication) {
         User user = requireUser(authentication.getName());
 
+        if (request.newPassword().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
+            throw new PasswordChangeException("PASSWORD_TOO_LONG", "New password is too long");
+        }
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
-            return ResponseEntity.badRequest().body(ApiResponse.fail("Current password is incorrect"));
+            throw new PasswordChangeException("INVALID_CURRENT_PASSWORD", "Current password is incorrect");
         }
         if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail("New password must be different from the current password"));
-        }
-        if (request.newPassword().getBytes(StandardCharsets.UTF_8).length > BCRYPT_MAX_BYTES) {
-            return ResponseEntity.badRequest().body(ApiResponse.fail("New password is too long"));
+            throw new PasswordChangeException(
+                    "PASSWORD_REUSE", "New password must be different from the current password");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
-        return ResponseEntity.ok(ApiResponse.ok("Password updated"));
+        return ApiResponse.<String>ok(null, "Password updated");
     }
 
     private User requireUser(String email) {

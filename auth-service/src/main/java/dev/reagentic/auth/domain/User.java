@@ -22,6 +22,12 @@ public class User {
     @Column(nullable = false)
     private String role;
 
+    @Column(name = "full_name")
+    private String fullName;
+
+    @Column(name = "phone")
+    private String phone;
+
     protected User() {
     }
 
@@ -44,7 +50,27 @@ public class User {
         return passwordHash;
     }
 
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
     public String getRole() {
         return role;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }

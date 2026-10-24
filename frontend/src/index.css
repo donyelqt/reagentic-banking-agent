@@ -140,7 +140,7 @@ a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,te
 @keyframes spin{to{transform:rotate(360deg)}}
 
 @media (prefers-reduced-motion:reduce){
-  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  html:not([data-reduce-motion="false"]) *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
 html[data-reduce-motion="true"] *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 /* ===== Reagentic brand mark ===== */

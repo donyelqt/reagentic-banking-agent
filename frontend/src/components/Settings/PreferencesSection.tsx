@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import {
-  applyReducedMotion,
+  applyMotionPreference,
+  effectiveReduceMotion,
   NONE_ACCOUNT,
   readPreferences,
+  systemPrefersReducedMotion,
   writePreferences,
   type Preferences,
 } from "../../lib/preferences";
@@ -17,25 +19,31 @@ export default function PreferencesSection({
   accounts: AccountView[];
 }) {
   const [preferences, setPreferences] = useState<Preferences>(() => readPreferences(email));
-  const [saved, setSaved] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
     setPreferences(readPreferences(email));
-    setSaved(null);
+    setMessage(null);
   }, [email]);
 
-  function update(next: Partial<Preferences>, message: string) {
+  function update(next: Partial<Preferences>, ok: string) {
     const merged: Preferences = { ...preferences, ...next };
+    const stored = writePreferences(email, merged);
+    if (!stored) {
+      setMessage({ kind: "err", text: "We couldn't save that preference. Try again." });
+      return;
+    }
     setPreferences(merged);
-    writePreferences(email, merged);
-    if (next.reduceMotion !== undefined) applyReducedMotion(merged.reduceMotion);
-    setSaved(message);
+    if (next.reduceMotion !== undefined) applyMotionPreference(merged);
+    setMessage({ kind: "ok", text: ok });
   }
 
   const selected = preferences.defaultAccountId ?? NONE_ACCOUNT;
   const stored = preferences.defaultAccountId;
   const known = stored ? accounts.some((account) => account.accountId === stored) : true;
   const missing = stored && !known ? stored : null;
+  const reduced = effectiveReduceMotion(preferences);
+  const systemReduced = systemPrefersReducedMotion();
 
   return (
     <section id="preferences" aria-labelledby="preferences-heading" className="scroll-mt-24">
@@ -85,31 +93,36 @@ export default function PreferencesSection({
           <div className="mt-5 flex max-w-sm items-center justify-between gap-4">
             <div>
               <p id="reduceMotion-label" className="text-sm font-medium">Reduce motion</p>
-              <p className="mt-1 text-xs text-muted">
-                {preferences.reduceMotion
-                  ? "Animations and transitions are off."
-                  : "Animations follow your system setting."}
-              </p>
+              <p className="mt-1 text-xs text-muted">{motionCopy(reduced, preferences.reduceMotion, systemReduced)}</p>
+              {preferences.reduceMotion !== null && (
+                <button
+                  type="button"
+                  onClick={() => update({ reduceMotion: null }, "Motion now follows your system setting.")}
+                  className="mt-2 text-xs font-medium text-accent transition hover:underline"
+                >
+                  Use my system setting
+                </button>
+              )}
             </div>
             <button
               type="button"
               role="switch"
-              aria-checked={preferences.reduceMotion}
+              aria-checked={reduced}
               aria-labelledby="reduceMotion-label"
               onClick={() =>
                 update(
-                  { reduceMotion: !preferences.reduceMotion },
-                  preferences.reduceMotion ? "Motion turned back on." : "Motion turned off.",
+                  { reduceMotion: !reduced },
+                  reduced ? "Motion turned back on." : "Motion turned off.",
                 )
               }
               className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                preferences.reduceMotion ? "bg-accent" : "bg-line"
+                reduced ? "bg-accent" : "bg-line"
               }`}
             >
               <span
                 aria-hidden="true"
                 className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-soft transition-transform ${
-                  preferences.reduceMotion ? "translate-x-[22px]" : "translate-x-0.5"
+                  reduced ? "translate-x-[22px]" : "translate-x-0.5"
                 }`}
               />
             </button>
@@ -118,10 +131,19 @@ export default function PreferencesSection({
 
         <div className="mt-8 border-t border-line pt-6">
           <div role="status" aria-live="polite">
-            {saved && <p className="text-sm text-pos">{saved}</p>}
+            {message && (
+              <p className={`text-sm ${message.kind === "ok" ? "text-pos" : "text-neg"}`}>{message.text}</p>
+            )}
           </div>
         </div>
       </div>
     </section>
   );
+}
+
+function motionCopy(reduced: boolean, stored: boolean | null, systemReduced: boolean) {
+  if (stored === null) return "Animations follow your system setting.";
+  if (stored && reduced) return "Animations and transitions are off.";
+  if (!stored && systemReduced) return "Animations are on, overriding your system's reduced motion setting.";
+  return "Animations and transitions are on.";
 }

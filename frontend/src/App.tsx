@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Landing from "./Landing";
 import Login from "./components/Login";
@@ -10,7 +10,7 @@ import AgentChat from "./components/AgentChat";
 import Settings from "./components/Settings/Settings";
 import { Brand } from "./components/Brand";
 import { sessionFromToken, type Session } from "./api";
-import { applyReducedMotion, readPreferences } from "./lib/preferences";
+import { applyMotionPreference, readPreferences } from "./lib/preferences";
 import { useAccounts, qk, queryClient } from "./lib/queries";
 import type { AccountView } from "./types";
 import FloatingChat from "./components/FloatingChat";
@@ -30,8 +30,8 @@ export default function App() {
   const { data: accounts = [] } = useAccounts(!!token && stage === "app");
   const sessionEmail = session?.email ?? "";
 
-  useEffect(() => {
-    applyReducedMotion(sessionEmail ? readPreferences(sessionEmail).reduceMotion : false);
+  useLayoutEffect(() => {
+    applyMotionPreference(sessionEmail ? readPreferences(sessionEmail) : { defaultAccountId: null, reduceMotion: null });
   }, [sessionEmail]);
 
   function logout() {
@@ -203,7 +203,7 @@ function AppShell({
                 isEmployee ? (
                   <Navigate to="/agent" replace />
                 ) : (
-                  <ActivityPage accounts={accounts} email={email} />
+                  <ActivityPage key={email} accounts={accounts} email={email} />
                 )
               }
             />
@@ -214,6 +214,7 @@ function AppShell({
                   <Navigate to="/agent" replace />
                 ) : (
                   <Transfer
+                    key={email}
                     accounts={accounts}
                     email={email}
                     onDone={() => {

@@ -1,6 +1,6 @@
 export type Preferences = {
   defaultAccountId: string | null;
-  reduceMotion: boolean;
+  reduceMotion: boolean | null;
 };
 
 const STORAGE_PREFIX = "reagentic.preferences.";
@@ -17,10 +17,7 @@ export function systemPrefersReducedMotion() {
 }
 
 export function readPreferences(email: string): Preferences {
-  const fallback: Preferences = {
-    defaultAccountId: null,
-    reduceMotion: systemPrefersReducedMotion(),
-  };
+  const fallback: Preferences = { defaultAccountId: null, reduceMotion: null };
   if (!email) return fallback;
   try {
     const raw = window.localStorage.getItem(preferencesKey(email));
@@ -28,9 +25,10 @@ export function readPreferences(email: string): Preferences {
     const parsed = JSON.parse(raw) as Partial<Preferences>;
     return {
       defaultAccountId:
-        typeof parsed.defaultAccountId === "string" ? parsed.defaultAccountId : null,
-      reduceMotion:
-        typeof parsed.reduceMotion === "boolean" ? parsed.reduceMotion : fallback.reduceMotion,
+        typeof parsed.defaultAccountId === "string" && parsed.defaultAccountId.length > 0
+          ? parsed.defaultAccountId
+          : null,
+      reduceMotion: typeof parsed.reduceMotion === "boolean" ? parsed.reduceMotion : null,
     };
   } catch {
     return fallback;
@@ -38,18 +36,31 @@ export function readPreferences(email: string): Preferences {
 }
 
 export function writePreferences(email: string, preferences: Preferences) {
-  if (!email) return;
+  if (!email) return false;
   try {
     window.localStorage.setItem(preferencesKey(email), JSON.stringify(preferences));
+    return true;
   } catch {
-    return;
+    return false;
   }
 }
 
-export function applyReducedMotion(reduceMotion: boolean) {
+export function effectiveReduceMotion(preferences: Preferences) {
+  return preferences.reduceMotion ?? systemPrefersReducedMotion();
+}
+
+export function applyMotionPreference(preferences: Preferences) {
   const root = document.documentElement;
-  if (reduceMotion) root.setAttribute("data-reduce-motion", "true");
-  else root.removeAttribute("data-reduce-motion");
+  if (preferences.reduceMotion === null) root.removeAttribute("data-reduce-motion");
+  else root.setAttribute("data-reduce-motion", preferences.reduceMotion ? "true" : "false");
+}
+
+export function reducedMotionEnabled() {
+  if (typeof document === "undefined") return false;
+  const attribute = document.documentElement.getAttribute("data-reduce-motion");
+  if (attribute === "true") return true;
+  if (attribute === "false") return false;
+  return systemPrefersReducedMotion();
 }
 
 export function preferredAccountId(email: string, accounts: { accountId: string }[]) {

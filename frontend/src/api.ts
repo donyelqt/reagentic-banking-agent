@@ -1,4 +1,4 @@
-import type { AccountView, AgentResponse, ApiResponse, CategorySpend, ChatRequest, ClassifySummaryResponse, ClassifyTransactionsResponse, LedgerEntry, LoginResponse, ReconcileResult, TransferResponse } from "./types";
+import type { AccountView, AgentResponse, ApiResponse, CategorySpend, ChatRequest, ClassifySummaryResponse, ClassifyTransactionsResponse, LedgerEntry, LoginResponse, ReconcileResult, TransferResponse, UserProfile } from "./types";
 
 const API = import.meta.env.VITE_GATEWAY_URL || "";
 
@@ -36,6 +36,11 @@ export async function login(username: string, password: string): Promise<string>
 }
 
 export const getAccounts = () => req<ApiResponse<AccountView[]>>("/api/accounts");
+
+export const getProfile = () => req<ApiResponse<UserProfile>>("/api/auth/profile");
+
+export const updateProfile = (body: { fullName: string | null; phone: string | null }) =>
+  req<ApiResponse<UserProfile>>("/api/auth/profile", { method: "PUT", body: JSON.stringify(body) });
 
 export const transfer = (body: {
   sourceAccountId: string;

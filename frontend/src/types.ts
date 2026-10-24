@@ -4,6 +4,13 @@ export interface AccountView {
   balance: string
 }
 
+export interface UserProfile {
+  email: string
+  role: string
+  fullName: string | null
+  phone: string | null
+}
+
 export interface LedgerEntry {
   entryId: number
   accountId: string

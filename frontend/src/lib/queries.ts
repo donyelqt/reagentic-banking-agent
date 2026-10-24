@@ -1,5 +1,5 @@
 import { QueryClient, useQuery, useQueries } from "@tanstack/react-query";
-import { getAccounts, getLedger, getInternalLedger, getInternalAccounts } from "../api";
+import { getAccounts, getLedger, getInternalLedger, getInternalAccounts, getProfile } from "../api";
 import type { AccountView } from "../types";
 
 export const queryClient = new QueryClient({
@@ -17,9 +17,20 @@ export const queryClient = new QueryClient({
 export const qk = {
   accounts: ["accounts"] as const,
   internalAccounts: ["internalAccounts"] as const,
+  profiles: ["profile"] as const,
+  profile: (email: string) => ["profile", email] as const,
   ledger: (accountId: string) => ["ledger", accountId] as const,
   internalLedger: (accountId: string) => ["internalLedger", accountId] as const,
 } as const;
+
+export function useProfile(email: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.profile(email),
+    queryFn: () => getProfile().then((r) => r.data),
+    enabled: enabled && !!email,
+    staleTime: 60_000,
+  });
+}
 
 export function useAccounts(enabled = true) {
   return useQuery({

@@ -47,6 +47,16 @@ function LedgerIcon() {
   );
 }
 
+function SettingsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
+      <path d="M4 8h9M17 8h3M4 16h3M11 16h9" strokeLinecap="round" />
+      <circle cx="15" cy="8" r="2" />
+      <circle cx="9" cy="16" r="2" />
+    </svg>
+  );
+}
+
 function CloseIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
@@ -70,12 +80,14 @@ function itemsFor(isEmployee: boolean): NavItem[] {
     return [
       { to: "/agent", label: "Ops Console", icon: <AgentIcon /> },
       { to: "/ops", label: "Ledger Console", icon: <LedgerIcon /> },
+      { to: "/settings", label: "Settings", icon: <SettingsIcon /> },
     ];
   return [
     { to: "/dashboard", label: "Dashboard", icon: <DashboardIcon /> },
     { to: "/activity", label: "Activity", icon: <ActivityIcon /> },
     { to: "/transfer", label: "Transfer", icon: <TransferIcon /> },
     { to: "/agent", label: "Agent", icon: <AgentIcon /> },
+    { to: "/settings", label: "Settings", icon: <SettingsIcon /> },
   ];
 }
 
